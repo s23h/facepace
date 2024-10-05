@@ -1,7 +1,7 @@
 gunicorn==20.0.4
 Flask>=2.0.0
 Jinja2>=3.0.0
-MarkupSafe>=2.0.0
+# MarkupSafe>=2.0.0
 mistralai==1.1.0
 requests
 
@@ -9,5 +9,5 @@ numpy
 pandas
 scipy
 mediapipe
-opencv-python-headless
+opencv-python
 PyQt5
