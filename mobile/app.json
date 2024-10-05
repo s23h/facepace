@@ -5,6 +5,7 @@
     "name": "FacePace",
     "slug": "facepace",
     "scheme": "facepace",
+    "owner": "salman2",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon-all.png",
@@ -79,6 +80,11 @@
     ],
     "experiments": {
       "tsconfigPaths": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "49b40efc-2819-4a18-a9a8-876a60189045"
+      }
     }
   },
   "ignite": {

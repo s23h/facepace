@@ -21,5 +21,12 @@ module.exports = ({ config }: ConfigContext): Partial<ExpoConfig> => {
       ...existingPlugins,
       require("./plugins/withSplashScreen").withSplashScreen,
     ],
+    // Add EAS Update configuration
+    updates: {
+      url: "https://u.expo.dev/49b40efc-2819-4a18-a9a8-876a60189045"
+    },
+    runtimeVersion: {
+      policy: "appVersion"
+    },
   }
 }
