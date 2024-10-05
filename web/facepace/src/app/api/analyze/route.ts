@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-    const { imageUrl } = await request.json();
+    const { videoUrl, imageUrl } = await request.json();
 
-    console.log('Analyzing image:', imageUrl);
+    console.log(`Analyzing video: ${videoUrl} and image: ${imageUrl}`);
 
-    if (!imageUrl) {
-        console.error('Error: No image URL provided');
-        return NextResponse.json({ error: 'No image URL provided' }, { status: 400 });
+    if (!videoUrl || !imageUrl) {
+        console.error('Error: Missing video or image URL');
+        return NextResponse.json({ error: 'Missing video or image URL' }, { status: 400 });
     }
 
     try {
@@ -16,7 +16,10 @@ export async function POST(request: Request) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ image_url: imageUrl }),
+            body: JSON.stringify({
+                video_url: videoUrl,
+                image_url: imageUrl
+            }),
         });
 
         if (!response.ok) {
@@ -28,7 +31,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({ result: `Estimated age: ${estimatedAge}` });
     } catch (error) {
-        console.error('Error analyzing image:', error);
-        return NextResponse.json({ error: 'Failed to analyze image' }, { status: 500 });
+        console.error('Error analyzing media:', error);
+        return NextResponse.json({ error: 'Failed to analyze media' }, { status: 500 });
     }
 }

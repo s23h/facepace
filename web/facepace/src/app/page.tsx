@@ -8,10 +8,14 @@ import Image from 'next/image';
 export default function Home() {
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [recordedVideo, setRecordedVideo] = useState<Blob | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [countdown, setCountdown] = useState(5);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [loadingStep, setLoadingStep] = useState<string | null>(null);
+  const [step, setStep] = useState<'start' | 'record' | 'photo' | 'analysis'>('start');
 
   useEffect(() => {
     startCamera();
@@ -27,20 +31,15 @@ export default function Home() {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
-      const constraints = {
-        video: {
-          facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      };
-      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: true
+      });
       setStream(newStream);
       if (videoRef.current) {
         videoRef.current.srcObject = newStream;
         videoRef.current.onloadedmetadata = () => {
           videoRef.current?.play();
-          setIsCameraReady(true);
         };
       }
     } catch (error) {
@@ -59,57 +58,92 @@ export default function Home() {
     }
   };
 
+  const startRecording = () => {
+    if (!stream) return;
+
+    const mediaRecorder = new MediaRecorder(stream);
+    mediaRecorderRef.current = mediaRecorder;
+    const chunks: BlobPart[] = [];
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        chunks.push(event.data);
+      }
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      setRecordedVideo(blob);
+      setStep('photo');
+    };
+
+    mediaRecorder.start();
+    setIsRecording(true);
+    setCountdown(5);
+
+    const countdownInterval = setInterval(() => {
+      setCountdown((prevCount) => {
+        if (prevCount <= 1) {
+          clearInterval(countdownInterval);
+          mediaRecorder.stop();
+          setIsRecording(false);
+          return 0;
+        }
+        return prevCount - 1;
+      });
+    }, 1000);
+  };
+
   const handleUpload = async () => {
-    if (!capturedImage) {
-      console.error('No image captured');
+    if (!capturedImage || !recordedVideo) {
+      console.error('Both image and video are required');
       return;
     }
 
     try {
       setLoadingStep('Uploading');
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Ensure at least 1 second display
 
+      // Upload video
+      const { data: videoData, error: videoError } = await supabase.storage
+        .from('photos')
+        .upload(`video-${Date.now()}.webm`, recordedVideo);
+
+      if (videoError) throw videoError;
+      if (!videoData || !videoData.path) throw new Error('Video upload successful but no data returned');
+
+      const { data: videoUrlData } = supabase.storage.from('photos').getPublicUrl(videoData.path);
+      if (!videoUrlData || !videoUrlData.publicUrl) throw new Error('Failed to get video public URL');
+
+      const videoUrl = videoUrlData.publicUrl;
+
+      // Upload image
       const response = await fetch(capturedImage);
       const blob = await response.blob();
-
-      const { data, error } = await supabase.storage
+      const { data: imageData, error: imageError } = await supabase.storage
         .from('photos')
         .upload(`photo-${Date.now()}.jpg`, blob);
 
-      if (error) {
-        console.error('Error uploading file:', error);
-        setLoadingStep(null);
-        return;
-      }
+      if (imageError) throw imageError;
+      if (!imageData || !imageData.path) throw new Error('Image upload successful but no data returned');
 
-      if (!data || !data.path) {
-        console.error('Upload successful but no data returned');
-        setLoadingStep(null);
-        return;
-      }
+      const { data: imageUrlData } = supabase.storage.from('photos').getPublicUrl(imageData.path);
+      if (!imageUrlData || !imageUrlData.publicUrl) throw new Error('Failed to get image public URL');
 
-      const { data: urlData } = supabase.storage
-        .from('photos')
-        .getPublicUrl(data.path);
-
-      if (!urlData || !urlData.publicUrl) {
-        console.error('Failed to get public URL');
-        setLoadingStep(null);
-        return;
-      }
+      const imageUrl = imageUrlData.publicUrl;
 
       setLoadingStep('Analyzing');
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Ensure at least 1 second display
 
-      const analyzeResponse = await axios.post('/api/analyze', { imageUrl: urlData.publicUrl });
+      const analyzeResponse = await axios.post('/api/analyze', { 
+        videoUrl,
+        imageUrl
+      });
       
       if (!analyzeResponse.data || !analyzeResponse.data.result) {
-        console.error('Analyze API returned unexpected data:', analyzeResponse.data);
-        setLoadingStep(null);
-        return;
+        throw new Error('Analyze API returned unexpected data');
       }
 
       setAnalysisResult(analyzeResponse.data.result);
+      setStep('analysis');
     } catch (error) {
       console.error('Error in handleUpload:', error);
     } finally {
@@ -119,23 +153,25 @@ export default function Home() {
 
   const resetCapture = () => {
     setCapturedImage(null);
+    setRecordedVideo(null);
     setAnalysisResult(null);
+    setStep('record');
     startCamera();
   };
 
   return (
     <main className="relative h-screen w-full overflow-hidden">
-      {!capturedImage ? (
-        <div className="absolute inset-0">
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            playsInline 
-            muted 
-            className="object-cover w-full h-full"
-          />
-        </div>
-      ) : (
+      <div className="absolute inset-0">
+        <video 
+          ref={videoRef} 
+          autoPlay 
+          playsInline 
+          muted 
+          className={`object-cover w-full h-full ${step === 'analysis' || loadingStep ? 'brightness-50 blur-sm' : ''}`}
+        />
+      </div>
+
+      {capturedImage && step === 'photo' && !loadingStep && (
         <div className="absolute inset-0">
           <Image 
             src={capturedImage} 
@@ -150,62 +186,83 @@ export default function Home() {
         <h1 className="text-3xl sm:text-4xl font-bold text-white text-center mt-8">Face Analyzer</h1>
         
         <div className="w-full max-w-md space-y-4">
-          {!capturedImage ? (
+          {step === 'start' && (
+            <button 
+              onClick={() => setStep('record')} 
+              className="w-full px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
+            >
+              Start
+            </button>
+          )}
+
+          {step === 'record' && (
             <>
-              {!isCameraReady && (
-                <button 
-                  onClick={startCamera} 
-                  className="w-full px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
-                >
-                  Start Camera
-                </button>
-              )}
-              {isCameraReady && (
-                <button 
-                  onClick={capturePhoto} 
-                  className="w-full px-6 py-3 bg-green-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-green-600 transition duration-300 ease-in-out"
-                >
-                  Capture Photo
-                </button>
+              <p className="text-white text-center text-lg mb-4">
+                Record yourself counting down from 5 whilst looking at the camera
+              </p>
+              <button 
+                onClick={startRecording} 
+                disabled={isRecording}
+                className={`w-20 h-20 rounded-full bg-red-500 flex items-center justify-center mx-auto transition duration-300 ease-in-out ${
+                  isRecording ? 'opacity-75 cursor-not-allowed' : 'hover:bg-red-600'
+                }`}
+              >
+                {isRecording ? countdown : ''}
+              </button>
+            </>
+          )}
+
+          {step === 'photo' && !loadingStep && (
+            <>
+              <p className="text-white text-center text-lg mb-4">
+                Now take a photo of yourself smiling
+              </p>
+              <div className="flex justify-center space-x-4">
+                {!capturedImage && (
+                  <button 
+                    onClick={capturePhoto} 
+                    className="w-20 h-20 rounded-full bg-white flex items-center justify-center"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-gray-200"></div>
+                  </button>
+                )}
+              </div>
+              {capturedImage && (
+                <div className="flex space-x-2 mt-4">
+                  <button 
+                    onClick={resetCapture} 
+                    className="flex-1 px-6 py-3 bg-red-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-red-600 transition duration-300 ease-in-out"
+                  >
+                    Retake
+                  </button>
+                  <button 
+                    onClick={handleUpload} 
+                    className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
+                  >
+                    Analyze
+                  </button>
+                </div>
               )}
             </>
-          ) : (
-            <div className="flex space-x-2">
-              <button 
-                onClick={handleUpload} 
-                disabled={!!loadingStep}
-                className={`flex-1 px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg transition duration-300 ease-in-out ${
-                  loadingStep ? 'opacity-75 cursor-not-allowed' : 'hover:bg-blue-600'
-                }`}
-              >
-                {loadingStep ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    {loadingStep}...
-                  </span>
-                ) : (
-                  'Analyze'
-                )}
-              </button>
-              <button 
-                onClick={resetCapture} 
-                disabled={!!loadingStep}
-                className={`flex-1 px-6 py-3 bg-red-500 text-white rounded-full text-lg font-semibold shadow-lg transition duration-300 ease-in-out ${
-                  loadingStep ? 'opacity-75 cursor-not-allowed' : 'hover:bg-red-600'
-                }`}
-              >
-                Retake
-              </button>
+          )}
+          
+          {loadingStep && (
+            <div className="text-white text-center">
+              <p className="text-lg mb-2">{loadingStep}...</p>
+              <div className="w-8 h-8 border-t-2 border-blue-500 border-solid rounded-full animate-spin mx-auto"></div>
             </div>
           )}
           
-          {analysisResult && !loadingStep && (
+          {step === 'analysis' && analysisResult && (
             <div className="p-4 bg-white bg-opacity-80 rounded-lg">
               <h2 className="text-xl font-semibold mb-2">Analysis Result:</h2>
               <p className="text-lg">{analysisResult}</p>
+              <button 
+                onClick={() => setStep('start')} 
+                className="mt-4 w-full px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
+              >
+                Start Over
+              </button>
             </div>
           )}
         </div>
