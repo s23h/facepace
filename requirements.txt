@@ -9,3 +9,4 @@ numpy
 pandas
 scipy
 opencv-python-headless
+PyQt5
