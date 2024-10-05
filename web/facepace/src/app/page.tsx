@@ -202,32 +202,36 @@ export default function Home() {
 
   return (
     <main className="relative w-full h-screen flex flex-col justify-between overflow-hidden">
-      <div className="absolute inset-0">
-        <video 
-          ref={videoRef} 
-          autoPlay 
-          playsInline 
-          muted 
-          className={`object-cover w-full h-full transform scale-x-[-1] ${step !== 'record' || loadingStep ? 'brightness-50 blur-sm' : ''}`}
-        />
+      <div className="absolute inset-0 sm:p-4"> {/* Added sm: to make padding apply only on larger screens */}
+        <div className="relative w-full h-full overflow-hidden rounded-camera"> {/* Kept rounded-camera class */}
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            muted 
+            className={`absolute inset-0 object-cover w-full h-full transform scale-x-[-1] ${step !== 'record' || loadingStep ? 'brightness-50 blur-sm' : ''}`}
+          />
+        </div>
       </div>
 
       {capturedImage && step === 'photo' && !loadingStep && (
-        <div className="absolute inset-0">
-          <Image 
-            src={capturedImage} 
-            alt="Captured" 
-            layout="fill"
-            objectFit="cover"
-            className="transform scale-x-[-1]"
-          />
+        <div className="absolute inset-0 sm:p-4"> {/* Added sm: to make padding apply only on larger screens */}
+          <div className="relative w-full h-full overflow-hidden rounded-camera"> {/* Kept rounded-camera class */}
+            <Image 
+              src={capturedImage} 
+              alt="Captured" 
+              layout="fill"
+              objectFit="cover"
+              className="transform scale-x-[-1]"
+            />
+          </div>
         </div>
       )}
 
       <div className="relative z-10 flex flex-col justify-between h-full p-4 pt-safe pb-safe">
         <div className="flex-shrink-0">
           {step !== 'start' && (
-            <h1 className={`${instrumentSerif.className} text-4xl font-bold text-teal-500 text-center mb-4`}>
+            <h1 className={`${instrumentSerif.className} text-4xl font-bold text-teal-500 text-center mb-4 pt-8`}>
               Face Pace
             </h1>
           )}
@@ -325,7 +329,7 @@ export default function Home() {
               />
               <button 
                 onClick={handleAgeSubmit}
-                className="w-full px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
+                className="w-full px-6 py-3 bg-teal-500 text-gray-800 rounded-md text-lg font-semibold shadow-lg hover:bg-teal-300 transition duration-300 ease-in-out"
               >
                 Analyze
               </button>

@@ -33,6 +33,12 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+  
+  .rounded-camera {
+    border-radius: 1rem; /* Reduced from 2rem to 1rem for less pronounced rounding */
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Reduced border width for subtlety */
+  }
 }
 
 .full-viewport-height {
