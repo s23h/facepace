@@ -1,3 +1,4 @@
+import io
 from flask import Flask, request, jsonify
 import os
 from mistralai import Mistral
@@ -102,6 +103,8 @@ def pixtral_get_age():
 
     hr, vs, ts = process_video(video_url, "data.npz")
 
+    return {"test": 2}
+
     hrv_prompt = f"""
     Given the following data from a video-based heart rate measurement:
     - Calculated heart rate: {hr} bpm
@@ -160,3 +163,7 @@ def pixtral_get_age():
         return jsonify({'age': age, 'hr': hr, "hrv_estimate": hrv_estimate, "hr_estimate": hr_estimate}), 200
     else:
         return jsonify({'error': 'Failed to determine age'}), 500
+    
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)

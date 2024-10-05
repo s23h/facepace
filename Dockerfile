@@ -24,7 +24,7 @@ COPY --from=builder /install /usr/local
 # Copy the rest of the application code
 COPY . .
 
-ENV PORT=5000
+ENV PORT=8080
 
 # Command to run your application
 CMD gunicorn app:app --bind 0.0.0.0:$PORT
