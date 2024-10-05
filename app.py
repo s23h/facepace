@@ -121,7 +121,7 @@ def pixtral_get_age():
 
     # Request analysis from Mistral
     hrv_response = mistral.chat.complete(
-        model="mistral-large",
+        model="pixtral-12b",
         messages=[
             {
                 "role": "user",
