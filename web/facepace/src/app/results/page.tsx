@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import Image from 'next/image';
@@ -9,16 +9,18 @@ import { Instrument_Serif } from 'next/font/google';
 const instrumentSerif = Instrument_Serif({ subsets: ['latin'], weight: '400' });
 
 interface LeaderboardEntry {
-  id: string;  // uuid type in database
+  id: string;
   name: string;
   functional_age: number;
   image_url: string;
-  created_at: string;  // or Date, depending on how you handle timestamps
+  created_at: string;
 }
 
 function ResultsContent() {
   const [functionalAge, setFunctionalAge] = useState<number | null>(null);
   const [biologicalAgeDifference, setBiologicalAgeDifference] = useState<string | null>(null);
+  const [heartRate, setHeartRate] = useState<number | null>(null);
+  const [heartRateVariability, setHeartRateVariability] = useState<number | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
   const [showNameInput, setShowNameInput] = useState(false);
@@ -26,14 +28,19 @@ function ResultsContent() {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState<number | null>(null);
   const searchParams = useSearchParams();
+  const cardsContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const functionalAgeParam = searchParams?.get('functionalAge');
     const biologicalAgeDifferenceParam = searchParams?.get('biologicalAgeDifference');
+    const heartRateParam = searchParams?.get('heartRate');
+    const heartRateVariabilityParam = searchParams?.get('heartRateVariability');
     const imageUrlParam = searchParams?.get('imageUrl');
 
     if (functionalAgeParam) setFunctionalAge(Number(functionalAgeParam));
     if (biologicalAgeDifferenceParam) setBiologicalAgeDifference(biologicalAgeDifferenceParam);
+    if (heartRateParam) setHeartRate(Number(heartRateParam));
+    if (heartRateVariabilityParam) setHeartRateVariability(Number(heartRateVariabilityParam));
     if (imageUrlParam) setImageUrl(decodeURIComponent(imageUrlParam));
   }, [searchParams]);
 
@@ -84,19 +91,72 @@ function ResultsContent() {
     }
   };
 
+  const handleScroll = (direction: 'left' | 'right') => {
+    if (cardsContainerRef.current) {
+      const scrollAmount = direction === 'left' ? -cardsContainerRef.current.offsetWidth : cardsContainerRef.current.offsetWidth;
+      cardsContainerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gray-100 p-4">
-      {/* Results Card */}
-      <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 mb-4">
-        <div className={`${instrumentSerif.className}`}>
-          <p className="text-2xl mb-2">Your functional age is</p>
-          <p className="text-8xl font-bold text-teal-500 my-4">{functionalAge}</p>
-          <p className="text-3xl">
-            This means your biological age is<br />
-            <span className="text-teal-500">{biologicalAgeDifference}</span><br />
-            than your calendar age.
-          </p>
+      {/* Swipeable Results Cards */}
+      <div className="relative max-w-md mx-auto mb-4">
+        <div 
+          ref={cardsContainerRef} 
+          className="overflow-x-auto snap-x snap-mandatory flex w-full scrollbar-hide"
+        >
+          {/* Functional Age Card */}
+          <div className="snap-center shrink-0 w-full flex-none">
+            <div className="bg-white rounded-lg shadow-lg p-6 m-2">
+              <div className={`${instrumentSerif.className}`}>
+                <p className="text-2xl mb-2">Your functional age is</p>
+                <p className="text-8xl font-bold text-teal-500 my-4">{functionalAge}</p>
+                <p className="text-3xl">
+                  This means your biological age is<br />
+                  <span className="text-teal-500">{biologicalAgeDifference}</span><br />
+                  than your calendar age.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Heart Rate and HRV Card */}
+          <div className="snap-center shrink-0 w-full flex-none">
+            <div className="bg-white rounded-lg shadow-lg p-6 m-2">
+              <div className={`${instrumentSerif.className}`}>
+                <p className="text-2xl mb-2">Your heart metrics</p>
+                <div className="flex justify-between items-center my-4">
+                  <div>
+                    <p className="text-6xl font-bold text-teal-500">{heartRate}</p>
+                    <p className="text-xl">BPM</p>
+                  </div>
+                  <div>
+                    <p className="text-6xl font-bold text-teal-500">{heartRateVariability}</p>
+                    <p className="text-xl">ms HRV</p>
+                  </div>
+                </div>
+                <p className="text-3xl">
+                  Your heart health is<br />
+                  <span className="text-teal-500">above average</span><br />
+                  for your age group.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
+        <button 
+          onClick={() => handleScroll('left')} 
+          className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white rounded-full p-2 shadow-md z-10"
+        >
+          &lt;
+        </button>
+        <button 
+          onClick={() => handleScroll('right')} 
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white rounded-full p-2 shadow-md z-10"
+        >
+          &gt;
+        </button>
       </div>
 
       {/* Actions Card */}

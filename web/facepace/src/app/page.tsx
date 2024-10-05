@@ -17,9 +17,10 @@ export default function Home() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [loadingStep, setLoadingStep] = useState<string | null>(null);
-  const [step, setStep] = useState<'start' | 'record' | 'photo' | 'analysis'>('start');
+  const [step, setStep] = useState<'start' | 'record' | 'photo' | 'age' | 'analysis'>('start');
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const router = useRouter();
+  const [age, setAge] = useState<string>('');
 
   useEffect(() => {
     startCamera();
@@ -140,9 +141,17 @@ export default function Home() {
     }, 1000);
   };
 
+  const handleAgeSubmit = () => {
+    if (!age || isNaN(Number(age)) || Number(age) <= 0 || Number(age) >= 120) {
+      alert('Please enter a valid age between 1 and 120.');
+      return;
+    }
+    handleUpload();
+  };
+
   const handleUpload = async () => {
-    if (!capturedImage || !videoUrl) {
-      console.error('Both image and video URL are required');
+    if (!capturedImage || !videoUrl || !age) {
+      console.error('Image, video URL, and age are all required');
       return;
     }
 
@@ -168,16 +177,17 @@ export default function Home() {
 
       const analyzeResponse = await axios.post('/api/analyze', { 
         videoUrl,
-        imageUrl
+        imageUrl,
+        age: Number(age)  // Include the age in the API call
       });
       
       if (!analyzeResponse.data || !analyzeResponse.data.result) {
         throw new Error('Analyze API returned unexpected data');
       }
 
-      const { functionalAge, biologicalAgeDifference } = analyzeResponse.data.result;
+      const { functionalAge, biologicalAgeDifference, heartRate, heartRateVariability } = analyzeResponse.data.result;
 
-      router.push(`/results?functionalAge=${functionalAge}&biologicalAgeDifference=${biologicalAgeDifference}&imageUrl=${encodeURIComponent(imageUrl)}`);
+      router.push(`/results?functionalAge=${functionalAge}&biologicalAgeDifference=${encodeURIComponent(biologicalAgeDifference)}&heartRate=${heartRate}&heartRateVariability=${heartRateVariability}&imageUrl=${encodeURIComponent(imageUrl)}&age=${age}`);
     } catch (error) {
       console.error('Error in handleUpload:', error);
     } finally {
@@ -290,13 +300,36 @@ export default function Home() {
                     Retake Photo
                   </button>
                   <button 
-                    onClick={handleUpload} 
+                    onClick={() => setStep('age')} 
                     className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
                   >
-                    Analyze
+                    Next
                   </button>
                 </div>
               )}
+            </>
+          )}
+
+          {step === 'age' && !loadingStep && (
+            <>
+              <p className="text-white text-center text-lg mb-4">
+                Please enter your age
+              </p>
+              <input
+                type="number"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                className="w-full px-4 py-2 text-lg text-gray-900 bg-white rounded-md shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Your age"
+                min="1"
+                max="120"
+              />
+              <button 
+                onClick={handleAgeSubmit}
+                className="w-full px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
+              >
+                Analyze
+              </button>
             </>
           )}
           
