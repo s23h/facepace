@@ -4,7 +4,9 @@ import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
 import axios from 'axios';
 import Image from 'next/image';
-import Head from 'next/head';
+import { Instrument_Serif } from 'next/font/google';
+
+const instrumentSerif = Instrument_Serif({ subsets: ['latin'], weight: '400' });
 
 export default function Home() {
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
@@ -182,122 +184,134 @@ export default function Home() {
   };
 
   return (
-    <>
-      <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-      </Head>
-      <main className="relative full-viewport-height w-full overflow-hidden pt-safe">
+    <main className="relative h-screen w-full overflow-hidden pt-safe">
+      <div className="absolute inset-0">
+        <video 
+          ref={videoRef} 
+          autoPlay 
+          playsInline 
+          muted 
+          className={`object-cover w-full h-full ${step !== 'record' || loadingStep ? 'brightness-50 blur-sm' : ''}`}
+        />
+      </div>
+
+      {capturedImage && step === 'photo' && !loadingStep && (
         <div className="absolute inset-0">
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            playsInline 
-            muted 
-            className={`object-cover w-full h-full ${step === 'analysis' || loadingStep ? 'brightness-50 blur-sm' : ''}`}
+          <Image 
+            src={capturedImage} 
+            alt="Captured" 
+            layout="fill"
+            objectFit="cover"
           />
         </div>
+      )}
 
-        {capturedImage && step === 'photo' && !loadingStep && (
-          <div className="absolute inset-0">
-            <Image 
-              src={capturedImage} 
-              alt="Captured" 
-              layout="fill"
-              objectFit="cover"
-            />
-          </div>
-        )}
-
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-between p-4">
-          <h1 className="text-3xl sm:text-4xl font-bold text-white text-center mt-8">Face Analyzer</h1>
-          
-          <div className="w-full max-w-md space-y-4">
-            {step === 'start' && (
-              <button 
-                onClick={() => setStep('record')} 
-                className="w-full px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
-              >
-                Start
-              </button>
-            )}
-
-            {step === 'record' && (
-              <>
-                {!isRecording && (
-                  <p className="text-white text-center text-lg mb-4">
-                    Record yourself counting down from 5 whilst looking at the camera
-                  </p>
-                )}
-                <button 
-                  onClick={startRecording} 
-                  disabled={isRecording}
-                  className={`w-20 h-20 rounded-full bg-red-500 flex items-center justify-center mx-auto transition duration-300 ease-in-out ${
-                    isRecording ? 'opacity-75 cursor-not-allowed' : 'hover:bg-red-600'
-                  }`}
-                >
-                  {isRecording ? countdown : ''}
-                </button>
-              </>
-            )}
-
-            {step === 'photo' && !loadingStep && (
-              <>
-                <p className="text-white text-center text-lg mb-4">
-                  Now take a photo of yourself smiling
-                </p>
-                <div className="flex justify-center space-x-4">
-                  {!capturedImage && (
-                    <button 
-                      onClick={capturePhoto} 
-                      className="w-20 h-20 rounded-full bg-white flex items-center justify-center"
-                    >
-                      <div className="w-16 h-16 rounded-full bg-gray-200"></div>
-                    </button>
-                  )}
-                </div>
-                {capturedImage && (
-                  <div className="flex space-x-2 mt-4">
-                    <button 
-                      onClick={resetCapture} 
-                      className="flex-1 px-6 py-3 bg-red-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-red-600 transition duration-300 ease-in-out"
-                    >
-                      Retake Photo
-                    </button>
-                    <button 
-                      onClick={handleUpload} 
-                      className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
-                    >
-                      Analyze
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-            
-            {loadingStep && (
-              <div className="text-white text-center">
-                <p className="text-lg mb-2">{loadingStep}...</p>
-                <div className="w-8 h-8 border-t-2 border-blue-500 border-solid rounded-full animate-spin mx-auto"></div>
-              </div>
-            )}
-            
-            {step === 'analysis' && analysisResult && (
-              <div className="p-4 bg-white bg-opacity-80 rounded-lg">
-                <h2 className="text-xl font-semibold mb-2">Analysis Result:</h2>
-                <p className="text-lg">{analysisResult}</p>
-                <button 
-                  onClick={() => setStep('start')} 
-                  className="mt-4 w-full px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
-                >
-                  Start Over
-                </button>
-              </div>
-            )}
+      {step === 'start' ? (
+        <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center p-4">
+          <div className="text-center mb-8">
+            <h1 className={`${instrumentSerif.className} text-9xl sm:text-9xl font-bold text-teal-500 leading-tight mb-4`}>
+              Face<span className="block -mt-10">Pace</span>
+            </h1>
+            <p className={`${instrumentSerif.className} text-white text-lg`}>
+              Decode your aging, hack longevity.
+            </p>
           </div>
         </div>
-      </main>
-    </>
+      ):
+      <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-start p-4 pt-safe">
+          <div className="text-center mt-8">
+            <h1 className={`${instrumentSerif.className} text-4xl sm:text-4xl font-bold text-teal-500 leading-tight mb-4`}>
+              Face Pace
+            </h1>
+          </div>
+        </div>
+      }
+
+      <div className="absolute bottom-0 left-0 right-0 p-4">
+        <div className="w-full max-w-md mx-auto space-y-4">
+          {step === 'start' && (
+            <button 
+              onClick={() => setStep('record')} 
+              className="w-full px-6 py-3 bg-teal-500 text-white rounded-md text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
+            >
+              Get Started
+            </button>
+          )}
+
+          {step === 'record' && (
+            <>
+              {!isRecording && (
+                <p className="text-white text-center text-lg mb-4">
+                  Record yourself counting down from 5 whilst looking at the camera
+                </p>
+              )}
+              <button 
+                onClick={startRecording} 
+                disabled={isRecording}
+                className={`w-20 h-20 rounded-full bg-red-500 flex items-center justify-center mx-auto transition duration-300 ease-in-out ${
+                  isRecording ? 'opacity-75 cursor-not-allowed' : 'hover:bg-red-600'
+                }`}
+              >
+                {isRecording ? countdown : ''}
+              </button>
+            </>
+          )}
+
+          {step === 'photo' && !loadingStep && (
+            <>
+              <p className="text-white text-center text-lg mb-4">
+                Now take a photo of yourself smiling
+              </p>
+              <div className="flex justify-center space-x-4">
+                {!capturedImage && (
+                  <button 
+                    onClick={capturePhoto} 
+                    className="w-20 h-20 rounded-full bg-white flex items-center justify-center"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-gray-200"></div>
+                  </button>
+                )}
+              </div>
+              {capturedImage && (
+                <div className="flex space-x-2 mt-4">
+                  <button 
+                    onClick={resetCapture} 
+                    className="flex-1 px-6 py-3 bg-red-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-red-600 transition duration-300 ease-in-out"
+                  >
+                    Retake Photo
+                  </button>
+                  <button 
+                    onClick={handleUpload} 
+                    className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
+                  >
+                    Analyze
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+          
+          {loadingStep && (
+            <div className="text-white text-center">
+              <p className="text-lg mb-2">{loadingStep}...</p>
+              <div className="w-8 h-8 border-t-2 border-blue-500 border-solid rounded-full animate-spin mx-auto"></div>
+            </div>
+          )}
+          
+          {step === 'analysis' && analysisResult && (
+            <div className="p-4 bg-white bg-opacity-80 rounded-lg">
+              <h2 className="text-xl font-semibold mb-2">Analysis Result:</h2>
+              <p className="text-lg">{analysisResult}</p>
+              <button 
+                onClick={() => setStep('start')} 
+                className="mt-4 w-full px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
+              >
+                Start Over
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
   );
 }
