@@ -201,7 +201,7 @@ export default function Home() {
   };
 
   return (
-    <main className="relative h-screen w-full overflow-hidden pt-safe">
+    <main className="relative w-full h-screen flex flex-col justify-between overflow-hidden">
       <div className="absolute inset-0">
         <video 
           ref={videoRef} 
@@ -209,7 +209,6 @@ export default function Home() {
           playsInline 
           muted 
           className={`object-cover w-full h-full transform scale-x-[-1] ${step !== 'record' || loadingStep ? 'brightness-50 blur-sm' : ''}`}
-          // Keep the transform scale-x-[-1] here to mirror the video preview
         />
       </div>
 
@@ -220,34 +219,34 @@ export default function Home() {
             alt="Captured" 
             layout="fill"
             objectFit="cover"
-            className="transform scale-x-[-1]" // Add this line to mirror the image
+            className="transform scale-x-[-1]"
           />
         </div>
       )}
 
-      {step === 'start' ? (
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center p-4">
-          <div className="text-center mb-8">
-            <h1 className={`${instrumentSerif.className} text-9xl sm:text-9xl font-bold text-teal-500 leading-tight mb-4`}>
-              Face<span className="block -mt-10">Pace</span>
-            </h1>
-            <p className={`${instrumentSerif.className} text-white text-lg`}>
-              Decode your aging, hack longevity.
-            </p>
-          </div>
-        </div>
-      ):
-      <div className="absolute inset-0 flex flex-col items-center justify-start p-4 pt-safe">
-          <div className="text-center mt-8">
-            <h1 className={`${instrumentSerif.className} text-4xl sm:text-4xl font-bold text-teal-500 leading-tight mb-4`}>
+      <div className="relative z-10 flex flex-col justify-between h-full p-4 pt-safe pb-safe">
+        <div className="flex-shrink-0">
+          {step !== 'start' && (
+            <h1 className={`${instrumentSerif.className} text-4xl font-bold text-teal-500 text-center mb-4`}>
               Face Pace
             </h1>
-          </div>
+          )}
         </div>
-      }
 
-      <div className="absolute bottom-0 left-0 right-0 p-4">
-        <div className="w-full max-w-md mx-auto space-y-4">
+        <div className="flex-grow flex items-center justify-center">
+          {step === 'start' && (
+            <div className="text-center">
+              <h1 className={`${instrumentSerif.className} text-6xl sm:text-8xl font-bold text-teal-500 leading-tight mb-4`}>
+                Face<span className="block -mt-4">Pace</span>
+              </h1>
+              <p className={`${instrumentSerif.className} text-white text-lg mb-8`}>
+                Decode your aging, hack longevity.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="w-full max-w-md mx-auto space-y-4 flex-shrink-0 mb-4">
           {step === 'start' && (
             <button 
               onClick={() => setStep('record')} 
@@ -281,7 +280,7 @@ export default function Home() {
               <p className="text-white text-center text-lg mb-4">
                 Now take a photo of yourself smiling
               </p>
-              <div className="flex justify-center space-x-4">
+              <div className="flex justify-center space-x-4 mb-4">
                 {!capturedImage && (
                   <button 
                     onClick={capturePhoto} 
@@ -292,7 +291,7 @@ export default function Home() {
                 )}
               </div>
               {capturedImage && (
-                <div className="flex space-x-2 mt-4">
+                <div className="flex space-x-2">
                   <button 
                     onClick={resetCapture} 
                     className="flex-1 px-6 py-3 bg-red-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-red-600 transition duration-300 ease-in-out"
