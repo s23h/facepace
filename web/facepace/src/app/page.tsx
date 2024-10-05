@@ -11,7 +11,6 @@ const instrumentSerif = Instrument_Serif({ subsets: ['latin'], weight: '400' });
 export default function Home() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [countdown, setCountdown] = useState(5);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -20,6 +19,8 @@ export default function Home() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const router = useRouter();
   const [age, setAge] = useState<string>('');
+  const [recordingStep, setRecordingStep] = useState<'initial' | 'getReady' | 'faceGuide' | 'openEyes' | 'counting' | 'done'>('initial');
+  const [count, setCount] = useState(1);
 
   useEffect(() => {
     startCamera();
@@ -119,25 +120,32 @@ export default function Home() {
 
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunks, { type: 'video/webm' });
-      uploadVideo(blob);  // Start uploading the video immediately
+      uploadVideo(blob);
       setStep('photo');
     };
 
     mediaRecorder.start();
     setIsRecording(true);
-    setCountdown(5);
+    setRecordingStep('getReady');
 
-    const countdownInterval = setInterval(() => {
-      setCountdown((prevCount) => {
-        if (prevCount <= 1) {
-          clearInterval(countdownInterval);
-          mediaRecorder.stop();
-          setIsRecording(false);
-          return 0;
-        }
-        return prevCount - 1;
-      });
-    }, 1000);
+    // Sequence of steps
+    setTimeout(() => setRecordingStep('faceGuide'), 2000);
+    setTimeout(() => setRecordingStep('openEyes'), 4000);
+    setTimeout(() => setRecordingStep('counting'), 6000);
+    setTimeout(() => {
+      const countInterval = setInterval(() => {
+        setCount((prevCount) => {
+          if (prevCount >= 5) {
+            clearInterval(countInterval);
+            mediaRecorder.stop();
+            setIsRecording(false);
+            setRecordingStep('done');
+            return 5;
+          }
+          return prevCount + 1;
+        });
+      }, 1000);
+    }, 6000);
   };
 
   const handleAgeSubmit = () => {
@@ -231,9 +239,61 @@ export default function Home() {
               <h1 className={`${instrumentSerif.className} text-6xl sm:text-8xl font-bold text-teal-500 leading-tight mb-4`}>
                 Face<span className="block -mt-4">Pace</span>
               </h1>
-              <p className={`${instrumentSerif.className} text-white text-lg mb-8`}>
-                Decode your aging, hack longevity.
+              <p className={`${instrumentSerif.className} text-white text-2xl mb-8`}>
+                Decode your Aging, <br/> Hack Longevity.
               </p>
+            </div>
+          )}
+          {step === 'record' && (
+            <div className="text-center">
+              {recordingStep === 'initial' && (
+                <p className={`${instrumentSerif.className} text-white text-3xl mb-4`}>
+                  Center yourself in the screen<br />open your eyes wide
+                </p>
+              )}
+              {recordingStep === 'getReady' && (
+                <p className={`${instrumentSerif.className} text-white text-5xl mb-4`}>
+                  Get ready
+                </p>
+              )}
+              {recordingStep === 'faceGuide' && (
+                <div className="w-64 h-80 border-4 border-white rounded-full mx-auto"></div>
+              )}
+              {recordingStep === 'openEyes' && (
+                <p className={`${instrumentSerif.className} text-white text-5xl mb-4`}>
+                  Open your eyes wide
+                </p>
+              )}
+              {recordingStep === 'counting' && (
+                <p className={`${instrumentSerif.className} text-white text-7xl mb-4`}>
+                  {count}
+                </p>
+              )}
+            </div>
+          )}
+          {step === 'photo' && !loadingStep && (
+            <div className="flex-grow flex items-center justify-center">
+              <div className="text-center">
+                <p className={`${instrumentSerif.className} text-white text-3xl mb-4`}>
+                  Now take a photo of<br />yourself smiling
+                </p>
+              </div>
+            </div>
+          )}
+          {step === 'age' && !loadingStep && (
+            <div className="text-center w-full max-w-sm mx-auto">
+              <p className={`${instrumentSerif.className} text-white text-4xl mb-8`}>
+                Last step:<br />Enter your age
+              </p>
+              <input
+                type="number"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                className={`${instrumentSerif.className} w-full text-center text-6xl text-teal-500 bg-transparent border-b-2 border-teal-500 focus:outline-none focus:border-teal-300`}
+                placeholder="Your age"
+                min="1"
+                max="120"
+              />
             </div>
           )}
         </div>
@@ -242,7 +302,7 @@ export default function Home() {
           {step === 'start' && (
             <button 
               onClick={() => setStep('record')} 
-              className="w-full px-6 py-3 bg-teal-500 text-gray-800 rounded-md text-lg font-semibold shadow-lg hover:bg-teal-300 transition duration-300 ease-in-out"
+              className={`${instrumentSerif.className} w-full px-6 py-3 bg-teal-500 text-gray-900 rounded-md text-xl font-semibold shadow-lg hover:bg-teal-300 transition duration-300 ease-in-out`}
             >
               Get Started
             </button>
@@ -251,50 +311,38 @@ export default function Home() {
           {step === 'record' && (
             <>
               {!isRecording && (
-                <p className="text-white text-center text-lg mb-4">
-                  Record yourself counting down from 5 whilst looking at the camera
-                </p>
+                <button 
+                  onClick={startRecording} 
+                  className="w-20 h-20 rounded-full bg-red-500 flex items-center justify-center mx-auto transition duration-300 ease-in-out hover:bg-red-600"
+                >
+                  Record
+                </button>
               )}
-              <button 
-                onClick={startRecording} 
-                disabled={isRecording}
-                className={`w-20 h-20 rounded-full bg-red-500 flex items-center justify-center mx-auto transition duration-300 ease-in-out ${
-                  isRecording ? 'opacity-75 cursor-not-allowed' : 'hover:bg-red-600'
-                }`}
-              >
-                {isRecording ? countdown : ''}
-              </button>
             </>
           )}
 
           {step === 'photo' && !loadingStep && (
             <>
-              <p className="text-white text-center text-lg mb-4">
-                Now take a photo of yourself smiling
-              </p>
-              <div className="flex justify-center space-x-4 mb-4">
-                {!capturedImage && (
-                  <button 
-                    onClick={capturePhoto} 
-                    className="w-20 h-20 rounded-full bg-white flex items-center justify-center"
-                  >
-                    <div className="w-16 h-16 rounded-full bg-gray-200"></div>
-                  </button>
-                )}
-              </div>
-              {capturedImage && (
+              {!capturedImage ? (
+                <button 
+                  onClick={capturePhoto} 
+                  className="w-20 h-20 rounded-full bg-white flex items-center justify-center mx-auto"
+                >
+                  <div className="w-16 h-16 rounded-full bg-gray-200"></div>
+                </button>
+              ) : (
                 <div className="flex space-x-2">
                   <button 
                     onClick={resetCapture} 
-                    className="flex-1 px-6 py-3 bg-red-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-red-600 transition duration-300 ease-in-out"
+                    className={`${instrumentSerif.className} flex-1 px-6 py-3 bg-red-500 text-gray-900 rounded-md text-lg font-semibold shadow-lg hover:bg-red-400 transition duration-300 ease-in-out`}
                   >
                     Retake Photo
                   </button>
                   <button 
                     onClick={() => setStep('age')} 
-                    className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
+                    className={`${instrumentSerif.className} flex-1 px-6 py-3 bg-teal-500 text-gray-900 rounded-md text-lg font-semibold shadow-lg hover:bg-teal-300 transition duration-300 ease-in-out`}
                   >
-                    Next
+                    Continue
                   </button>
                 </div>
               )}
@@ -302,26 +350,12 @@ export default function Home() {
           )}
 
           {step === 'age' && !loadingStep && (
-            <>
-              <p className="text-white text-center text-lg mb-4">
-                Please enter your age
-              </p>
-              <input
-                type="number"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                className="w-full px-4 py-2 text-lg text-gray-900 bg-white rounded-md shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Your age"
-                min="1"
-                max="120"
-              />
-              <button 
-                onClick={handleAgeSubmit}
-                className="w-full px-6 py-3 bg-teal-500 text-gray-800 rounded-md text-lg font-semibold shadow-lg hover:bg-teal-300 transition duration-300 ease-in-out"
-              >
-                Analyze
-              </button>
-            </>
+            <button 
+              onClick={handleAgeSubmit}
+              className={`${instrumentSerif.className} w-full px-6 py-3 bg-teal-500 text-gray-900 rounded-md text-xl font-semibold shadow-lg hover:bg-teal-300 transition duration-300 ease-in-out`}
+            >
+              Start Analysis
+            </button>
           )}
           
           {loadingStep && (

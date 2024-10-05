@@ -298,17 +298,16 @@ function ResultsContent() {
         <div className="snap-center shrink-0 w-full flex-none h-[80vh] flex items-center">
           <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full h-full border-teal-500 border-2 overflow-y-auto">
             <div className={`${instrumentSerif.className}`}>
-              <p className="text-3xl mb-2 text-gray-900 ">Your Skin Analysis</p>
+              <p className="text-3xl mb-2 text-gray-900 ">Your Face Insights</p>
               <div className="space-y-4">
                 <div>
-                  <p className="text-xl text-gray-900">Acne</p>
-                  <p className="text-md text-gray-500">{analysisResult.acne.description}</p>
-                  <p className="text-teal-500">Score: {analysisResult.acne.score}/10</p>
+                  <p className="text-2xl text-gray-900">Acne - <span className="text-xl text-teal-500">{analysisResult.acne.score}/10</span></p>
+                  <p className="text-lg text-gray-500">{analysisResult.acne.description}</p>
                 </div>
                 <div>
-                  <p className="text-xl text-gray-900">Eye Bags</p>
-                  <p className="text-md text-gray-500">{analysisResult.eye_bags.description}</p>
-                  <p className="text-teal-500">Score: {analysisResult.eye_bags.score}/10</p>
+                  
+                  <p className="text-2xl text-gray-900">Sleep - <span className="text-xl text-teal-500">{analysisResult.eye_bags.score}/10</span></p>
+                  <p className="text-lg text-gray-500">{analysisResult.eye_bags.description}</p>
                 </div>
               </div>
             </div>
