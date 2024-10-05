@@ -8,7 +8,6 @@ import Image from 'next/image';
 export default function Home() {
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [recordedVideo, setRecordedVideo] = useState<Blob | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -16,6 +15,7 @@ export default function Home() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [loadingStep, setLoadingStep] = useState<string | null>(null);
   const [step, setStep] = useState<'start' | 'record' | 'photo' | 'analysis'>('start');
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     startCamera();
@@ -58,6 +58,24 @@ export default function Home() {
     }
   };
 
+  const uploadVideo = async (blob: Blob) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('photos')
+        .upload(`video-${Date.now()}.webm`, blob);
+
+      if (error) throw error;
+      if (!data || !data.path) throw new Error('Video upload successful but no data returned');
+
+      const { data: urlData } = supabase.storage.from('photos').getPublicUrl(data.path);
+      if (!urlData || !urlData.publicUrl) throw new Error('Failed to get video public URL');
+
+      setVideoUrl(urlData.publicUrl);
+    } catch (error) {
+      console.error('Error uploading video:', error);
+    }
+  };
+
   const startRecording = () => {
     if (!stream) return;
 
@@ -73,7 +91,7 @@ export default function Home() {
 
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunks, { type: 'video/webm' });
-      setRecordedVideo(blob);
+      uploadVideo(blob);  // Start uploading the video immediately
       setStep('photo');
     };
 
@@ -95,26 +113,13 @@ export default function Home() {
   };
 
   const handleUpload = async () => {
-    if (!capturedImage || !recordedVideo) {
-      console.error('Both image and video are required');
+    if (!capturedImage || !videoUrl) {
+      console.error('Both image and video URL are required');
       return;
     }
 
     try {
       setLoadingStep('Uploading');
-
-      // Upload video
-      const { data: videoData, error: videoError } = await supabase.storage
-        .from('photos')
-        .upload(`video-${Date.now()}.webm`, recordedVideo);
-
-      if (videoError) throw videoError;
-      if (!videoData || !videoData.path) throw new Error('Video upload successful but no data returned');
-
-      const { data: videoUrlData } = supabase.storage.from('photos').getPublicUrl(videoData.path);
-      if (!videoUrlData || !videoUrlData.publicUrl) throw new Error('Failed to get video public URL');
-
-      const videoUrl = videoUrlData.publicUrl;
 
       // Upload image
       const response = await fetch(capturedImage);
@@ -153,9 +158,6 @@ export default function Home() {
 
   const resetCapture = () => {
     setCapturedImage(null);
-    setRecordedVideo(null);
-    setAnalysisResult(null);
-    setStep('record');
     startCamera();
   };
 
@@ -197,9 +199,11 @@ export default function Home() {
 
           {step === 'record' && (
             <>
-              <p className="text-white text-center text-lg mb-4">
-                Record yourself counting down from 5 whilst looking at the camera
-              </p>
+              {!isRecording && (
+                <p className="text-white text-center text-lg mb-4">
+                  Record yourself counting down from 5 whilst looking at the camera
+                </p>
+              )}
               <button 
                 onClick={startRecording} 
                 disabled={isRecording}
@@ -233,7 +237,7 @@ export default function Home() {
                     onClick={resetCapture} 
                     className="flex-1 px-6 py-3 bg-red-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-red-600 transition duration-300 ease-in-out"
                   >
-                    Retake
+                    Retake Photo
                   </button>
                   <button 
                     onClick={handleUpload} 
