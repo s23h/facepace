@@ -85,9 +85,8 @@ def process_video(video_url, output_path):
     print(f"Processed {total_frames} frames")
     print(f"Estimated heart rate: {hr:.2f} bpm")
     print(hr, vs, ts)
-    return hr, vs, ts
-
     cap.release()
+    return hr, vs, ts
 
 app = Flask(__name__)
 
@@ -97,13 +96,12 @@ def index():
 
 @app.route('/pixtral_get_age', methods=['POST'])
 def pixtral_get_age():
+    return {"test": 2}
     data = request.get_json()
     image_url = data.get('image_url')
     video_url = data.get('video_url')
 
     hr, vs, ts = process_video(video_url, "data.npz")
-
-    return {"test": 2}
 
     hrv_prompt = f"""
     Given the following data from a video-based heart rate measurement:
