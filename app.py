@@ -17,7 +17,7 @@ def pixtral_get_age():
     if not image_url:
         return jsonify({'error': 'Image URL is required'}), 400
 
-    mistral = Mistral(api_key=os.getenv('MISTRAL_API_KEY'))
+    mistral = Mistral(api_key="OURAYTRBvuZ4rtmVs0Wlm4eRUgMsS40M")
     response = mistral.chat.complete(
         model="pixtral-12b",
         messages=[
