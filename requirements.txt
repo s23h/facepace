@@ -4,3 +4,11 @@ Jinja2>=3.0.0
 MarkupSafe>=2.0.0
 mistralai==1.1.0
 requests
+
+mediapipe
+numpy
+opencv_python
+pandas
+PyQt5
+pyqtgraph
+scipy

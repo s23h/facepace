@@ -1,6 +1,90 @@
 from flask import Flask, request, jsonify
 import os
 from mistralai import Mistral
+import sys
+import cv2
+import numpy as np
+from pathlib import Path
+from yarppg.rppg.rppg import RPPG
+from yarppg.rppg.roi.roi_detect import FaceMeshDetector
+from yarppg.rppg.processors import LiCvprProcessor
+from yarppg.rppg.hr import from_peaks
+from yarppg.rppg.hr import HRCalculator
+from yarppg.rppg.filters import get_butterworth_filter
+import requests
+
+def process_video(video_url, output_path):
+    response = requests.get(video_url, stream=True)
+
+    # Save video content to a temporary file
+    with open('temp_video.mp4', 'wb') as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+
+    # Initialize components
+    roi_detector = FaceMeshDetector()
+    processor = LiCvprProcessor()
+    rppg = RPPG(roi_detector)
+    rppg.add_processor(processor)
+
+    cap = cv2.VideoCapture('temp_video.mp4')
+    if not cap.isOpened():
+        print(f"Error: Could not open downloaded video")
+        return
+    
+    cap.set(cv2.CAP_PROP_AUTO_WB, 0)
+    cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # 0.25 means manual mode
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    if width > 3800 or height > 3800:
+        digital_lowpass = get_butterworth_filter(fps, 1.5, order=4)
+        hr_calc = HRCalculator(update_interval=int(fps), winsize=int(fps*15),
+                            filt_fun=lambda vs: [digital_lowpass(v) for v in vs]) 
+    elif fps > 45:
+        digital_lowpass = get_butterworth_filter(fps, 1.11, order=5)
+        hr_calc = HRCalculator(update_interval=int(fps), winsize=int(fps*10),
+                            filt_fun=lambda vs: [digital_lowpass(v) for v in vs])
+    else:
+        digital_lowpass = get_butterworth_filter(fps, 0.32, order=7)
+        hr_calc = HRCalculator(update_interval=int(fps*10), winsize=int(fps*30),
+                            filt_fun=lambda vs: [digital_lowpass(v) for v in vs])    
+
+    # Process video frames
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        rppg.on_frame_received(frame_rgb)
+
+        # Update HR calculation
+        hr_calc.update(rppg)
+
+
+    # Calculate final heart rate
+    vs = list(rppg.get_vs())[0]  # Get the first (and only) processor's data
+    ts = rppg.get_ts()
+    
+    # Apply digital lowpass filter element-wise
+    filtered_vs = np.array([digital_lowpass(v) for v in vs])
+    
+    hr = hr_calc.hr_fun(filtered_vs, ts)
+
+    # Save results
+    print(f"Processed {total_frames} frames")
+    print(f"Estimated heart rate: {hr:.2f} bpm")
+
+    import os
+    os.remove('temp_video.mp4')
+
+    return hr
+
+    cap.release()
 
 app = Flask(__name__)
 
@@ -12,6 +96,10 @@ def index():
 def pixtral_get_age():
     data = request.get_json()
     image_url = data.get('image_url')
+    video_url = data.get('video_url')
+
+    hr = process_video(video_url, "data.npz")
+
     if not image_url:
         return jsonify({'error': 'Image URL is required'}), 400
 
@@ -37,6 +125,6 @@ def pixtral_get_age():
 
     if response.choices:
         age = response.choices[0].message.content
-        return jsonify({'age': age}), 200
+        return jsonify({'age': age, 'hr': hr}), 200
     else:
         return jsonify({'error': 'Failed to determine age'}), 500
