@@ -1,11 +1,9 @@
-from flask import Flask
-import json
+from flask import Flask, request, jsonify
 import os
-from flask.json import jsonify
 from mistralai import Mistral
-from requests import request
 
 app = Flask(__name__)
+
 @app.route('/')
 def index():
     return "Hello world"
