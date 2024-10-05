@@ -8,5 +8,6 @@ requests
 numpy
 pandas
 scipy
+mediapipe
 opencv-python-headless
 PyQt5
