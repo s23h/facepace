@@ -117,6 +117,8 @@ def pixtral_get_age():
     Output your response as two numbers separated by a comma, like this: 'heart_rate, heart_rate_variability'
     """
 
+    mistral = Mistral(api_key="OURAYTRBvuZ4rtmVs0Wlm4eRUgMsS40M")
+
     # Request analysis from Mistral
     hrv_response = mistral.chat.complete(
         model="mistral-large",
@@ -137,7 +139,6 @@ def pixtral_get_age():
     if not image_url:
         return jsonify({'error': 'Image URL is required'}), 400
 
-    mistral = Mistral(api_key="OURAYTRBvuZ4rtmVs0Wlm4eRUgMsS40M")
     response = mistral.chat.complete(
         model="pixtral-12b",
         messages=[
