@@ -15,29 +15,31 @@ from yarppg.rppg.filters import get_butterworth_filter
 import requests
 
 def process_video(video_url, output_path):
-    response = requests.get(video_url, stream=True)
-    
-    # Read video content into memory
-    video_content = io.BytesIO()
-    for chunk in response.iter_content(chunk_size=8192):
-        video_content.write(chunk)
-    video_content.seek(0)
-
     # Initialize components
     roi_detector = FaceMeshDetector()
     processor = LiCvprProcessor()
     rppg = RPPG(roi_detector)
     rppg.add_processor(processor)
+    # Download video content and save to a temporary file
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_file:
+        response = requests.get(video_url, stream=True, verify=False)
+        if response.status_code != 200:
+            print(f"Error: Failed to download video. Status code: {response.status_code}")
+            return
+        
+        for chunk in response.iter_content(chunk_size=8192):
+            temp_file.write(chunk)
+        
+        temp_file_path = temp_file.name
 
-    # Use cv2.VideoCapture with the in-memory video content
-    video_bytes = np.asarray(bytearray(video_content.read()), dtype=np.uint8)
-    cap = cv2.VideoCapture()
-    cap.open(cv2.imdecode(video_bytes, cv2.IMREAD_UNCHANGED))
-
+    # Use cv2.VideoCapture with the temporary file
+    cap = cv2.VideoCapture(temp_file_path)
     if not cap.isOpened():
-        print(f"Error: Could not open downloaded video")
+        print("Error: Could not open downloaded video")
+        os.unlink(temp_file_path)
         return
     
+    # Rest of the function remains the same
     cap.set(cv2.CAP_PROP_AUTO_WB, 0)
     cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25)  # 0.25 means manual mode
 
@@ -84,7 +86,6 @@ def process_video(video_url, output_path):
     # Save results
     print(f"Processed {total_frames} frames")
     print(f"Estimated heart rate: {hr:.2f} bpm")
-    print(hr, vs, ts)
     cap.release()
     return hr, vs, ts
 
@@ -96,12 +97,13 @@ def index():
 
 @app.route('/pixtral_get_age', methods=['POST'])
 def pixtral_get_age():
-    return {"test": 2}
     data = request.get_json()
     image_url = data.get('image_url')
     video_url = data.get('video_url')
 
     hr, vs, ts = process_video(video_url, "data.npz")
+
+    return {"hr": hr}
 
     hrv_prompt = f"""
     Given the following data from a video-based heart rate measurement:
