@@ -226,7 +226,7 @@ function ResultsContent() {
         <div className="snap-center shrink-0 w-full flex-none h-full flex items-center">
           <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full border-teal-500 border-2">
             <div className={`${instrumentSerif.className}`}>
-              <p className="text-2xl mb-2 text-gray-900">Your functional age is</p>
+              <p className="text-3xl mb-2 text-gray-900">Your Functional Age</p>
               <p className="text-8xl font-bold text-teal-500 my-4">{analysisResult.functional_age}</p>
               <p className="text-3xl text-gray-900">
                 This means your biological age is 
@@ -242,28 +242,28 @@ function ResultsContent() {
         <div className="snap-center shrink-0 w-full flex-none h-full flex items-center">
           <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full border-teal-500 border-2">
             <div className={`${instrumentSerif.className}`}>
-              <h2 className="text-3xl font-bold mb-4">HEART HEALTH</h2>
+              <h2 className="text-3xl mb-4 text-gray-900">Your Heart Health</h2>
               <div className="flex items-baseline mb-4">
                 <span className="text-8xl font-bold text-teal-500">{analysisResult.hr.toFixed(0)}</span>
                 <span className="text-4xl ml-2 text-teal-500">bpm</span>
               </div>
-              <p className="text-lg mb-6">{analysisResult.heart_info}</p>
+              <p className="text-lg mb-6 text-gray-900">{analysisResult.heart_info}</p>
               <div className="grid grid-cols-4 gap-4 text-center">
                 <div>
-                  <p className="text-3xl font-bold text-teal-500">{analysisResult.nn50.toFixed(1)}</p>
-                  <p className="text-sm">nn50</p>
+                  <p className="text-3xl text-teal-500">{analysisResult.nn50.toFixed(1)}</p>
+                  <p className="text-sm text-gray-500">nn50</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-teal-500">{analysisResult.pnn50.toFixed(0)}%</p>
-                  <p className="text-sm">pnn50</p>
+                  <p className="text-3xl text-teal-500">{analysisResult.pnn50.toFixed(0)}%</p>
+                  <p className="text-sm text-gray-500">pnn50</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-teal-500">{analysisResult.rmssd.toFixed(0)}</p>
-                  <p className="text-sm">rmssd</p>
+                  <p className="text-3xl text-teal-500">{analysisResult.rmssd.toFixed(0)}</p>
+                  <p className="text-sm text-gray-500">rmssd</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-teal-500">{analysisResult.sdnn.toFixed(0)}</p>
-                  <p className="text-sm">sdnn</p>
+                  <p className="text-3xl text-teal-500">{analysisResult.sdnn.toFixed(0)}</p>
+                  <p className="text-sm text-gray-500">sdnn</p>
                 </div>
               </div>
               {renderScalingBar()}
@@ -275,16 +275,16 @@ function ResultsContent() {
         <div className="snap-center shrink-0 w-full flex-none h-full flex items-center">
           <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full border-teal-500 border-2">
             <div className={`${instrumentSerif.className}`}>
-              <p className="text-2xl mb-2">Skin Analysis</p>
+              <p className="text-3xl mb-2 text-gray-900 ">Your Skin Analysis</p>
               <div className="space-y-4">
                 <div>
-                  <p className="text-xl font-semibold">Acne</p>
-                  <p>{analysisResult.acne.description}</p>
+                  <p className="text-xl text-gray-900">Acne</p>
+                  <p className="text-md text-gray-500">{analysisResult.acne.description}</p>
                   <p className="text-teal-500">Score: {analysisResult.acne.score}/10</p>
                 </div>
                 <div>
-                  <p className="text-xl font-semibold">Eye Bags</p>
-                  <p>{analysisResult.eye_bags.description}</p>
+                  <p className="text-xl text-gray-900">Eye Bags</p>
+                  <p className="text-md text-gray-500">{analysisResult.eye_bags.description}</p>
                   <p className="text-teal-500">Score: {analysisResult.eye_bags.score}/10</p>
                 </div>
               </div>
