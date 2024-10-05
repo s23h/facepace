@@ -82,7 +82,7 @@ def process_video(video_url, output_path):
     import os
     os.remove('temp_video.mp4')
 
-    return hr
+    return hr, vs, ts
 
     cap.release()
 
@@ -98,7 +98,37 @@ def pixtral_get_age():
     image_url = data.get('image_url')
     video_url = data.get('video_url')
 
-    hr = process_video(video_url, "data.npz")
+    hr, vs, ts = process_video(video_url, "data.npz")
+
+    hrv_prompt = f"""
+    Given the following data from a video-based heart rate measurement:
+    - Calculated heart rate: {hr} bpm
+    - Pulse wave signal (vs): {vs[:10]}... (truncated for brevity)
+    - Time vector (ts): {ts[:10]}... (truncated for brevity)
+
+    Please analyze this data and provide:
+    1. The estimated heart rate (in bpm)
+    2. The estimated heart rate variability (in ms)
+
+    Output your response as two numbers separated by a comma, like this: 'heart_rate, heart_rate_variability'
+    """
+
+    # Request analysis from Mistral
+    hrv_response = mistral.chat.complete(
+        model="mistral-large",
+        messages=[
+            {
+                "role": "user",
+                "content": hrv_prompt
+            }
+        ]
+    )
+
+    if hrv_response.choices:
+        hr_analysis = hrv_response.choices[0].message.content.strip()
+        hr_estimate, hrv_estimate = map(float, hr_analysis.split(','))
+    else:
+        hr_estimate, hrv_estimate = hr, None  # Use calculated hr if Mistral fails
 
     if not image_url:
         return jsonify({'error': 'Image URL is required'}), 400
@@ -125,6 +155,6 @@ def pixtral_get_age():
 
     if response.choices:
         age = response.choices[0].message.content
-        return jsonify({'age': age, 'hr': hr}), 200
+        return jsonify({'age': age, 'hr': hr, 'heart_rate': hr_estimate, 'heart_rate_variability': hrv_estimate}), 200
     else:
         return jsonify({'error': 'Failed to determine age'}), 500

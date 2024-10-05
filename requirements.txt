@@ -8,3 +8,4 @@ requests
 numpy
 pandas
 scipy
+opencv-python-headless
