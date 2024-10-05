@@ -155,6 +155,6 @@ def pixtral_get_age():
 
     if response.choices:
         age = response.choices[0].message.content
-        return jsonify({'age': age, 'hr': hr, 'heart_rate': hr_estimate, 'heart_rate_variability': hrv_estimate}), 200
+        return jsonify({'age': age, 'hr': hr, "hrv_estimate": hrv_estimate, "hr_estimate": hr_estimate}), 200
     else:
         return jsonify({'error': 'Failed to determine age'}), 500

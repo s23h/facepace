@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from PyQt5.QtCore import pyqtSignal, QObject
 
-from yarppg.rppg.camera import Camera
+# from yarppg.rppg.camera import Camera
 
 
 def write_dataframe(path: Union[str, pathlib.Path], df: pd.DataFrame) -> None:
@@ -42,7 +42,7 @@ class RPPG(QObject):
         self._processors = []
         self._roi_detector = roi_detector
 
-        self._set_camera(camera)
+        # self._set_camera(camera)
 
         self._dts = []
         self.last_update = time.perf_counter()
@@ -55,9 +55,9 @@ class RPPG(QObject):
 
         self.output_filename = None
 
-    def _set_camera(self, camera):
-        self._cam = camera or Camera(video=0, parent=self)
-        self._cam.frame_received.connect(self.on_frame_received)
+    # def _set_camera(self, camera):
+    #     self._cam = camera or Camera(video=0, parent=self)
+    #     self._cam.frame_received.connect(self.on_frame_received)
 
     def add_processor(self, processor):
         self._processors.append(processor)
