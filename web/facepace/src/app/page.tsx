@@ -5,11 +5,11 @@ import { supabase } from '@/utils/supabase';
 import axios from 'axios';
 import Image from 'next/image';
 import { Instrument_Serif } from 'next/font/google';
+import { useRouter } from 'next/navigation';
 
 const instrumentSerif = Instrument_Serif({ subsets: ['latin'], weight: '400' });
 
 export default function Home() {
-  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [countdown, setCountdown] = useState(5);
@@ -19,6 +19,7 @@ export default function Home() {
   const [loadingStep, setLoadingStep] = useState<string | null>(null);
   const [step, setStep] = useState<'start' | 'record' | 'photo' | 'analysis'>('start');
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     startCamera();
@@ -74,7 +75,11 @@ export default function Home() {
       const canvas = document.createElement('canvas');
       canvas.width = videoRef.current.videoWidth;
       canvas.height = videoRef.current.videoHeight;
-      canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        // Capture the image exactly as it appears in the video element
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      }
       const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
       setCapturedImage(imageDataUrl);
     }
@@ -169,8 +174,9 @@ export default function Home() {
         throw new Error('Analyze API returned unexpected data');
       }
 
-      setAnalysisResult(analyzeResponse.data.result);
-      setStep('analysis');
+      const { functionalAge, biologicalAgeDifference } = analyzeResponse.data.result;
+
+      router.push(`/results?functionalAge=${functionalAge}&biologicalAgeDifference=${biologicalAgeDifference}&imageUrl=${encodeURIComponent(imageUrl)}`);
     } catch (error) {
       console.error('Error in handleUpload:', error);
     } finally {
@@ -191,7 +197,8 @@ export default function Home() {
           autoPlay 
           playsInline 
           muted 
-          className={`object-cover w-full h-full ${step !== 'record' || loadingStep ? 'brightness-50 blur-sm' : ''}`}
+          className={`object-cover w-full h-full transform scale-x-[-1] ${step !== 'record' || loadingStep ? 'brightness-50 blur-sm' : ''}`}
+          // Keep the transform scale-x-[-1] here to mirror the video preview
         />
       </div>
 
@@ -202,6 +209,7 @@ export default function Home() {
             alt="Captured" 
             layout="fill"
             objectFit="cover"
+            // Remove any transform class from here
           />
         </div>
       )}
@@ -218,7 +226,7 @@ export default function Home() {
           </div>
         </div>
       ):
-      <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-start p-4 pt-safe">
+      <div className="absolute inset-0 flex flex-col items-center justify-start p-4 pt-safe">
           <div className="text-center mt-8">
             <h1 className={`${instrumentSerif.className} text-4xl sm:text-4xl font-bold text-teal-500 leading-tight mb-4`}>
               Face Pace
@@ -232,7 +240,7 @@ export default function Home() {
           {step === 'start' && (
             <button 
               onClick={() => setStep('record')} 
-              className="w-full px-6 py-3 bg-teal-500 text-white rounded-md text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
+              className="w-full px-6 py-3 bg-teal-500 text-gray-800 rounded-md text-lg font-semibold shadow-lg hover:bg-teal-300 transition duration-300 ease-in-out"
             >
               Get Started
             </button>
@@ -297,19 +305,7 @@ export default function Home() {
               <div className="w-8 h-8 border-t-2 border-blue-500 border-solid rounded-full animate-spin mx-auto"></div>
             </div>
           )}
-          
-          {step === 'analysis' && analysisResult && (
-            <div className="p-4 bg-white bg-opacity-80 rounded-lg">
-              <h2 className="text-xl font-semibold mb-2">Analysis Result:</h2>
-              <p className="text-lg">{analysisResult}</p>
-              <button 
-                onClick={() => setStep('start')} 
-                className="mt-4 w-full px-6 py-3 bg-blue-500 text-white rounded-full text-lg font-semibold shadow-lg hover:bg-blue-600 transition duration-300 ease-in-out"
-              >
-                Start Over
-              </button>
-            </div>
-          )}
+        
         </div>
       </div>
     </main>
