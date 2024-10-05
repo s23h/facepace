@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
 import Image from 'next/image';
@@ -16,7 +16,7 @@ interface LeaderboardEntry {
   created_at: string;  // or Date, depending on how you handle timestamps
 }
 
-export default function ResultsPage() {
+function ResultsContent() {
   const [functionalAge, setFunctionalAge] = useState<number | null>(null);
   const [biologicalAgeDifference, setBiologicalAgeDifference] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -136,5 +136,13 @@ export default function ResultsPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function ResultsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ResultsContent />
+    </Suspense>
   );
 }
