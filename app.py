@@ -15,11 +15,12 @@ import requests
 
 def process_video(video_url, output_path):
     response = requests.get(video_url, stream=True)
-
-    # Save video content to a temporary file
-    with open('temp_video.mp4', 'wb') as f:
-        for chunk in response.iter_content(chunk_size=8192):
-            f.write(chunk)
+    
+    # Read video content into memory
+    video_content = io.BytesIO()
+    for chunk in response.iter_content(chunk_size=8192):
+        video_content.write(chunk)
+    video_content.seek(0)
 
     # Initialize components
     roi_detector = FaceMeshDetector()
@@ -27,7 +28,11 @@ def process_video(video_url, output_path):
     rppg = RPPG(roi_detector)
     rppg.add_processor(processor)
 
-    cap = cv2.VideoCapture('temp_video.mp4')
+    # Use cv2.VideoCapture with the in-memory video content
+    video_bytes = np.asarray(bytearray(video_content.read()), dtype=np.uint8)
+    cap = cv2.VideoCapture()
+    cap.open(cv2.imdecode(video_bytes, cv2.IMREAD_UNCHANGED))
+
     if not cap.isOpened():
         print(f"Error: Could not open downloaded video")
         return
@@ -78,10 +83,7 @@ def process_video(video_url, output_path):
     # Save results
     print(f"Processed {total_frames} frames")
     print(f"Estimated heart rate: {hr:.2f} bpm")
-
-    import os
-    os.remove('temp_video.mp4')
-
+    print(hr, vs, ts)
     return hr, vs, ts
 
     cap.release()
