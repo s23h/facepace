@@ -72,16 +72,15 @@ function ResultsContent() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
-  const [showNameInput, setShowNameInput] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState<number | null>(null);
-  const [showResults, setShowResults] = useState(true);
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const cardsContainerRef = useRef<HTMLDivElement>(null);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const totalCards = 4;
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -124,16 +123,6 @@ function ResultsContent() {
     };
   }, []);
 
-  const handleSeeRank = () => {
-    if (hasEnteredName) {
-      fetchLeaderboard();
-      setShowLeaderboard(true);
-      setShowResults(false);
-    } else {
-      setShowNameInput(true);
-    }
-  };
-
   const handleAddToLeaderboard = async () => {
     if (!userName || !analysisResult || !imageUrl) return;
 
@@ -148,9 +137,6 @@ function ResultsContent() {
 
       setHasEnteredName(true);
       await fetchLeaderboard();
-      setShowLeaderboard(true);
-      setShowResults(false);
-      setShowNameInput(false);
     } catch (error) {
       console.error('Error adding to leaderboard:', error);
     }
@@ -179,12 +165,14 @@ function ResultsContent() {
     if (cardsContainerRef.current) {
       const scrollAmount = direction === 'left' ? -cardsContainerRef.current.offsetWidth : cardsContainerRef.current.offsetWidth;
       cardsContainerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      
+      // Update the current card index
+      setCurrentCardIndex(prevIndex => {
+        if (direction === 'left' && prevIndex > 0) return prevIndex - 1;
+        if (direction === 'right' && prevIndex < totalCards - 1) return prevIndex + 1;
+        return prevIndex;
+      });
     }
-  };
-
-  const toggleView = () => {
-    setShowResults(!showResults);
-    setShowLeaderboard(!showLeaderboard);
   };
 
   const renderScalingBar = () => {
@@ -219,14 +207,47 @@ function ResultsContent() {
     );
   };
 
+  const renderLeaderboardCard = () => (
+    <div className="snap-center shrink-0 w-full flex-none h-[80vh] flex items-center">
+      <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full h-full border-teal-500 border-2 overflow-y-auto">
+        <div className={`${instrumentSerif.className}`}>
+          <h2 className="text-3xl mb-4 text-gray-900">Leaderboard</h2>
+          {userRank && userRank > 10 && (
+            <div className="mt-4 p-2 bg-teal-500 rounded mb-4">
+              <p className="text-white">Your rank: {userRank}</p>
+            </div>
+          )}
+          <div className="space-y-4">
+            {leaderboardData.slice(0, 10).map((entry, index) => (
+              <div key={entry.id} className={`flex items-center p-2 ${entry.name === userName ? 'bg-teal-500 rounded' : ''}`}>
+                <span className="font-bold mr-4 text-gray-800">{index + 1}</span>
+                <div className="w-10 h-10 rounded-camera overflow-hidden mr-4">
+                  <Image
+                    src={entry.image_url || '/default-avatar.png'}
+                    alt={entry.name}
+                    width={40}
+                    height={40}
+                    className="object-cover w-full h-full"
+                  />
+                </div>
+                <span className="flex-grow text-gray-800">{entry.name}</span>
+                <span className="font-semibold text-gray-800">{entry.functional_age}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderAnalysisCards = () => {
     if (!analysisResult) return null;
 
     return (
       <>
         {/* Functional Age Card */}
-        <div className="snap-center shrink-0 w-full flex-none h-full flex items-center">
-          <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full border-teal-500 border-2">
+        <div className="snap-center shrink-0 w-full flex-none h-[80vh] flex items-center">
+          <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full h-full border-teal-500 border-2 overflow-y-auto">
             <div className={`${instrumentSerif.className}`}>
               <p className="text-3xl mb-2 text-gray-900">Your Functional Age</p>
               <p className="text-8xl font-bold text-teal-500 my-4">{analysisResult.functional_age}</p>
@@ -241,8 +262,8 @@ function ResultsContent() {
         </div>
 
         {/* Heart Health Card */}
-        <div className="snap-center shrink-0 w-full flex-none h-full flex items-center">
-          <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full border-teal-500 border-2">
+        <div className="snap-center shrink-0 w-full flex-none h-[80vh] flex items-center">
+          <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full h-full border-teal-500 border-2 overflow-y-auto">
             <div className={`${instrumentSerif.className}`}>
               <h2 className="text-3xl mb-4 text-gray-900">Your Heart Health</h2>
               <div className="flex items-baseline mb-4">
@@ -274,8 +295,8 @@ function ResultsContent() {
         </div>
 
         {/* Skin Analysis Card */}
-        <div className="snap-center shrink-0 w-full flex-none h-full flex items-center">
-          <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full border-teal-500 border-2">
+        <div className="snap-center shrink-0 w-full flex-none h-[80vh] flex items-center">
+          <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full h-full border-teal-500 border-2 overflow-y-auto">
             <div className={`${instrumentSerif.className}`}>
               <p className="text-3xl mb-2 text-gray-900 ">Your Skin Analysis</p>
               <div className="space-y-4">
@@ -293,6 +314,34 @@ function ResultsContent() {
             </div>
           </div>
         </div>
+
+        {/* Leaderboard Card */}
+        {hasEnteredName ? (
+          renderLeaderboardCard()
+        ) : (
+          <div className="snap-center shrink-0 w-full flex-none h-[80vh] flex items-center justify-center">
+            <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full h-full border-teal-500 border-2 overflow-y-auto flex flex-col justify-center items-center">
+              <div className={`${instrumentSerif.className} text-center max-w-sm`}>
+                <h2 className="text-3xl mb-4 text-gray-900">Join the Leaderboard</h2>
+                <p className="mb-4 text-gray-500">Enter your name to see where you rank</p>
+                <input
+                  type="text"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-black mb-4"
+                  placeholder="Your name"
+                />
+                <button
+                  onClick={handleAddToLeaderboard}
+                  className="w-full bg-teal-500 text-white py-2 px-4 rounded-md hover:bg-teal-600 transition duration-300"
+                  disabled={!userName.trim()}
+                >
+                  Join Leaderboard
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </>
     );
   };
@@ -350,101 +399,29 @@ function ResultsContent() {
       <main className="relative w-full h-screen flex flex-col justify-between overflow-hidden bg-custom-bg">
         {isLoading ? renderLoadingScreen() : (
           <div className="flex-grow flex flex-col justify-between h-full p-4 pt-safe pb-safe">
-            {showResults && (
-              <div className="flex-grow flex items-center overflow-hidden mb-4">
-                <div className="relative w-full max-w-md mx-auto h-full flex items-center">
-                  <div 
-                    ref={cardsContainerRef} 
-                    className="overflow-x-auto snap-x snap-mandatory flex w-full h-full scrollbar-hide"
-                  >
-                    {renderAnalysisCards()}
-                  </div>
+            <h1 className={`${instrumentSerif.className} text-3xl text-teal-500 text-center mb-0`}>FACE PACE</h1>
+            <div className="flex-grow flex items-center overflow-hidden mb-4 h-[70vh] mt-2">
+              <div className="relative w-full max-w-md mx-auto h-full flex items-center">
+                <div 
+                  ref={cardsContainerRef} 
+                  className="overflow-x-auto snap-x snap-mandatory flex w-full h-full scrollbar-hide"
+                >
+                  {renderAnalysisCards()}
+                </div>
+                {currentCardIndex > 0 && (
                   <button 
                     onClick={() => handleScroll('left')} 
                     className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-teal-500 rounded-full p-2 shadow-md z-10"
                   >
                     &lt;
                   </button>
+                )}
+                {currentCardIndex < totalCards - 1 && (
                   <button 
                     onClick={() => handleScroll('right')} 
                     className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-teal-500 rounded-full p-2 shadow-md z-10"
                   >
                     &gt;
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {showLeaderboard && (
-              <div className="flex-grow overflow-y-auto mb-4 w-full max-w-md mx-auto">
-                <h2 className={`${instrumentSerif.className} text-2xl font-semibold mb-4 text-teal-500 text-center pt-4`}>Leaderboard</h2>
-                <div className="space-y-4">
-                                {userRank && userRank > 10 && (
-                  <div className="mt-4 p-2 bg-teal-500 rounded">
-                    <p className="text-white">Your rank: {userRank}</p>
-                  </div>
-                )}
-                  {leaderboardData.slice(0, 10).map((entry, index) => (
-                    <div key={entry.id} className={`flex items-center p-2 ${entry.name === userName ? 'bg-teal-500 rounded' : ''}`}>
-                      <span className="font-bold mr-4 text-gray-800">{index + 1}</span>
-                      <div className="w-10 h-10 rounded-camera overflow-hidden mr-4">
-                        <Image
-                          src={entry.image_url || '/default-avatar.png'}
-                          alt={entry.name}
-                          width={40}
-                          height={40}
-                          className="object-cover w-full h-full"
-                        />
-                      </div>
-                      <span className="flex-grow text-gray-800">{entry.name}</span>
-                      <span className="font-semibold text-gray-800">{entry.functional_age}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Actions Card */}
-            <div className="w-full max-w-md mx-auto">
-              <div className="bg-custom-bg rounded-lg shadow-lg py-4">
-                {!showNameInput && !showLeaderboard && (
-                  <div className="space-y-4">
-                    <button
-                      onClick={handleSeeRank}
-                      className="w-full bg-teal-500 text-white py-2 px-4 rounded-md hover:bg-teal-600 transition duration-300"
-                    >
-                      {hasEnteredName ? "Show Leaderboard" : "Unlock Leaderboard"}
-                    </button>
-                  </div>
-                )}
-
-                {showNameInput && !showLeaderboard && (
-                  <div>
-                    <div className="mb-4">
-                      <input
-                        type="text"
-                        value={userName}
-                        onChange={(e) => setUserName(e.target.value)}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-black"
-                        placeholder="To see where you rank, add your name"
-                      />
-                    </div>
-                    <button
-                      onClick={handleAddToLeaderboard}
-                      className="w-full bg-teal-500 text-white py-2 px-4 rounded-md hover:bg-teal-600 transition duration-300"
-                      disabled={!userName.trim()}
-                    >
-                      LEADERBOARD!
-                    </button>
-                  </div>
-                )}
-
-                {showLeaderboard && (
-                  <button
-                    onClick={toggleView}
-                    className="w-full bg-teal-500 text-white py-2 px-4 rounded-md hover:bg-teal-600 transition duration-300"
-                  >
-                    Show Results
                   </button>
                 )}
               </div>
