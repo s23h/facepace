@@ -21,6 +21,7 @@ function ResultsContent() {
   const [biologicalAgeDifference, setBiologicalAgeDifference] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
+  const [showNameInput, setShowNameInput] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState<number | null>(null);
@@ -36,6 +37,15 @@ function ResultsContent() {
     if (imageUrlParam) setImageUrl(decodeURIComponent(imageUrlParam));
   }, [searchParams]);
 
+  const handleShare = () => {
+    // Implement share functionality
+    console.log('Share functionality to be implemented');
+  };
+
+  const handleSeeRank = () => {
+    setShowNameInput(true);
+  };
+
   const handleAddToLeaderboard = async () => {
     if (!userName || !functionalAge || !imageUrl) return;
 
@@ -48,7 +58,7 @@ function ResultsContent() {
 
       if (error) throw error;
 
-      fetchLeaderboard();
+      await fetchLeaderboard();
       setShowLeaderboard(true);
     } catch (error) {
       console.error('Error adding to leaderboard:', error);
@@ -76,39 +86,61 @@ function ResultsContent() {
 
   return (
     <main className="min-h-screen bg-gray-100 p-4">
+      {/* Results Card */}
+      <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 mb-4">
+        <div className={`${instrumentSerif.className}`}>
+          <p className="text-2xl mb-2">Your functional age is</p>
+          <p className="text-8xl font-bold text-teal-500 my-4">{functionalAge}</p>
+          <p className="text-3xl">
+            This means your biological age is<br />
+            <span className="text-teal-500">{biologicalAgeDifference}</span><br />
+            than your calendar age.
+          </p>
+        </div>
+      </div>
+
+      {/* Actions Card */}
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
-        <h1 className={`${instrumentSerif.className} text-4xl font-bold text-center text-teal-500 mb-6`}>Your Results</h1>
-        
-        {!showLeaderboard ? (
-          <>
-            <div className="text-center mb-6">
-              <p className="text-2xl font-semibold">Your functional age is</p>
-              <p className="text-6xl font-bold text-teal-500 my-4">{functionalAge}</p>
-              <p className="text-lg">
-                This means your biological age is {biologicalAgeDifference} than your calendar age.
-              </p>
-            </div>
-            
+        {!showNameInput && !showLeaderboard && (
+          <div className="space-y-4">
+            <button
+              onClick={handleShare}
+              className="w-full bg-teal-500 text-white py-2 px-4 rounded-md hover:bg-teal-600 transition duration-300"
+            >
+              SHARE NOW
+            </button>
+            <button
+              onClick={handleSeeRank}
+              className="w-full bg-white text-teal-500 border border-teal-500 py-2 px-4 rounded-md hover:bg-teal-50 transition duration-300"
+            >
+              See where you rank
+            </button>
+          </div>
+        )}
+
+        {showNameInput && !showLeaderboard && (
+          <div>
+            <h2 className="text-2xl font-semibold mb-4">To see where you rank, add your name</h2>
             <div className="mb-4">
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">Enter your name:</label>
               <input
                 type="text"
-                id="name"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                placeholder="Enter your name"
               />
             </div>
-            
             <button
               onClick={handleAddToLeaderboard}
               className="w-full bg-teal-500 text-white py-2 px-4 rounded-md hover:bg-teal-600 transition duration-300"
               disabled={!userName.trim()}
             >
-              See where you rank
+              LEADERBOARD!
             </button>
-          </>
-        ) : (
+          </div>
+        )}
+
+        {showLeaderboard && (
           <div>
             <h2 className="text-2xl font-semibold mb-4">Leaderboard</h2>
             <div className="space-y-4">

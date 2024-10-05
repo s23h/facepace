@@ -77,8 +77,9 @@ export default function Home() {
       canvas.height = videoRef.current.videoHeight;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        // Capture the image exactly as it appears in the video element
-        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        // Flip the image horizontally when capturing
+        ctx.scale(-1, 1);
+        ctx.drawImage(videoRef.current, -canvas.width, 0, canvas.width, canvas.height);
       }
       const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
       setCapturedImage(imageDataUrl);
@@ -209,7 +210,7 @@ export default function Home() {
             alt="Captured" 
             layout="fill"
             objectFit="cover"
-            // Remove any transform class from here
+            className="transform scale-x-[-1]" // Add this line to mirror the image
           />
         </div>
       )}
