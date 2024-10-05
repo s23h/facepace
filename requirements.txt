@@ -11,3 +11,4 @@ scipy
 mediapipe
 opencv-python
 PyQt5
+tempfile

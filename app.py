@@ -13,6 +13,7 @@ from yarppg.rppg.hr import from_peaks
 from yarppg.rppg.hr import HRCalculator
 from yarppg.rppg.filters import get_butterworth_filter
 import requests
+import tempfile
 
 def process_video(video_url, output_path):
     # Initialize components
@@ -102,8 +103,6 @@ def pixtral_get_age():
     video_url = data.get('video_url')
 
     hr, vs, ts = process_video(video_url, "data.npz")
-
-    return {"hr": hr}
 
     hrv_prompt = f"""
     Given the following data from a video-based heart rate measurement:
