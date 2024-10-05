@@ -1,32 +1,35 @@
-'use client';
-
-import './globals.css'
+import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { Instrument_Serif } from 'next/font/google'
-import { useEffect } from 'react'
+import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
-const instrumentSerif = Instrument_Serif({ subsets: ['latin'], weight: '400' })
+
+export const metadata: Metadata = {
+  title: 'FacePace',
+  description: 'Measure your functional age with FacePace',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'FacePace',
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
+}
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  useEffect(() => {
-    const setVh = () => {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', `${vh}px`);
-    };
-
-    setVh();
-    window.addEventListener('resize', setVh);
-
-    return () => window.removeEventListener('resize', setVh);
-  }, []);
-
   return (
-    <html lang="en" className={instrumentSerif.className}>
+    <html lang="en">
+      <head>
+        <meta name="theme-color" content="#000000" id="theme-color-meta" />
+      </head>
       <body className={inter.className}>{children}</body>
     </html>
   )

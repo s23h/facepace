@@ -10,7 +10,7 @@ module.exports = {
         'instrument-serif': ['"Instrument Serif"', 'serif'],
       },
       backgroundColor: {
-        'custom-bg': '#f5e6d3',
+        'custom-bg': '#FEF9EF',
       },
     },
   },

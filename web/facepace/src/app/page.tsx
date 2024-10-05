@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/utils/supabase';
-import axios from 'axios';
 import Image from 'next/image';
 import { Instrument_Serif } from 'next/font/google';
 import { useRouter } from 'next/navigation';
@@ -175,19 +174,8 @@ export default function Home() {
 
       setLoadingStep('Analyzing');
 
-      const analyzeResponse = await axios.post('/api/analyze', { 
-        videoUrl,
-        imageUrl,
-        age: Number(age)  // Include the age in the API call
-      });
-      
-      if (!analyzeResponse.data || !analyzeResponse.data.result) {
-        throw new Error('Analyze API returned unexpected data');
-      }
-
-      const { functionalAge, biologicalAgeDifference, heartRate, heartRateVariability } = analyzeResponse.data.result;
-
-      router.push(`/results?functionalAge=${functionalAge}&biologicalAgeDifference=${encodeURIComponent(biologicalAgeDifference)}&heartRate=${heartRate}&heartRateVariability=${heartRateVariability}&imageUrl=${encodeURIComponent(imageUrl)}&age=${age}`);
+      // Instead of calling the analyze API here, we'll pass the necessary data to the results page
+      router.push(`/results?videoUrl=${encodeURIComponent(videoUrl)}&imageUrl=${encodeURIComponent(imageUrl)}&age=${age}`);
     } catch (error) {
       console.error('Error in handleUpload:', error);
     } finally {
