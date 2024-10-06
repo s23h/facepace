@@ -391,6 +391,9 @@ def pixtral_get_age():
     functional_age = int(mistral_output['age'])
     pace_of_aging = functional_age / float(chron_age)
 
+    hr = float(hr)
+    if hr < 45: hr = 45
+    if hr > 100: hr = 98
     # Construct the final response
     response_data = {
         'functional_age': functional_age,
