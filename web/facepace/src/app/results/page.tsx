@@ -75,12 +75,13 @@ function ResultsContent() {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState<number | null>(null);
   const [hasEnteredName, setHasEnteredName] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const cardsContainerRef = useRef<HTMLDivElement>(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const totalCards = 4;
+  const [analysisStatus, setAnalysisStatus] = useState<'idle' | 'loading' | 'complete'>('idle');
+  const apiCallRef = useRef(false);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -88,8 +89,10 @@ function ResultsContent() {
       const imageUrl = searchParams?.get('imageUrl');
       const age = searchParams?.get('age');
 
-      if (videoUrl && imageUrl && age) {
+      if (videoUrl && imageUrl && age && !apiCallRef.current) {
         setImageUrl(decodeURIComponent(imageUrl));
+        setAnalysisStatus('loading');
+        apiCallRef.current = true;
         try {
           const response = await axios.post('/api/analyze', {
             videoUrl: decodeURIComponent(videoUrl),
@@ -97,10 +100,10 @@ function ResultsContent() {
             age: Number(age)
           });
           setAnalysisResult(response.data.result);
+          setAnalysisStatus('complete');
         } catch (error) {
           console.error('Error fetching analysis:', error);
-        } finally {
-          setIsLoading(false);
+          setAnalysisStatus('complete'); // Set to complete even on error to remove loading screen
         }
       }
     };
@@ -249,10 +252,17 @@ function ResultsContent() {
         <div className="snap-center shrink-0 w-full flex-none h-[80vh] flex items-center">
           <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full h-full border-teal-500 border-2 overflow-y-auto">
             <div className={`${instrumentSerif.className}`}>
-              <p className="text-3xl mb-2 text-gray-900">Your Functional Age</p>
-              <p className="text-8xl font-bold text-teal-500 my-4">{analysisResult.functional_age}</p>
+              <p className="text-3xl mb-2 text-gray-900">Your Pace of Ageing</p>
+              <p className="text-8xl font-bold text-teal-500 my-4">{Number(analysisResult.pace_of_aging).toFixed(2)}</p>
               <p className="text-3xl text-gray-900">
-                This means your biological age is 
+                Your{' '}
+                <Drawer.Trigger 
+                  onClick={() => setSelectedMetric('functional_age')}
+                  className="underline cursor-pointer"
+                >
+                  functional age
+                </Drawer.Trigger>{' '}
+                is {analysisResult.functional_age}, this makes you
                 <span className="text-teal-500"> {analysisResult.age_differential} </span>
                 than your calendar age.
               </p>
@@ -364,6 +374,10 @@ function ResultsContent() {
       sdnn: {
         value: analysisResult.sdnn.toFixed(0),
         info: analysisResult.sdnn_info
+      },
+      functional_age: {
+        value: analysisResult.functional_age,
+        info: "Functional age is a measure of how well your body is functioning compared to your chronological age. It takes into account various physiological and biological markers to estimate your body's 'true' age in terms of health and performance. A functional age lower than your chronological age suggests better overall health and slower aging, while a higher functional age may indicate accelerated aging or potential health issues."
       }
     };
 
@@ -372,7 +386,7 @@ function ResultsContent() {
     return (
       <>
         <Drawer.Title className={`${instrumentSerif.className} font-medium mb-0 text-gray-900 text-2xl `}>
-          {selectedMetric.toUpperCase()}
+          {selectedMetric === 'functional_age' ? 'Functional Age' : selectedMetric.toUpperCase()}
         </Drawer.Title>
         <h1 className={`${instrumentSerif.className} text-4xl text-teal-500 mb-2`}>
           {selectedInfo.value}
@@ -385,10 +399,12 @@ function ResultsContent() {
   };
 
   const renderLoadingScreen = () => (
-    <div className="fixed inset-0 bg-custom-bg flex items-center justify-center z-50">
-      <div className="text-center">
-        <div className="inline-block animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-teal-500 mb-4"></div>
+    <div className="fixed inset-0 bg-custom-bg flex flex-col items-center justify-center z-50">
+      <div className={`${instrumentSerif.className} text-center`}>
+        <h1 className="text-4xl text-teal-500 mb-8">Face Pace</h1>
+        <div className="inline-block animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-teal-500 mb-8"></div>
         <p className="text-2xl text-teal-500 font-semibold">Analyzing your results...</p>
+        <p className="text-lg text-gray-600 mt-4">This may take a few moments</p>
       </div>
     </div>
   );
@@ -396,7 +412,7 @@ function ResultsContent() {
   return (
     <Drawer.Root>
       <main className="relative w-full h-screen flex flex-col justify-between overflow-hidden bg-custom-bg">
-        {isLoading ? renderLoadingScreen() : (
+        {analysisStatus === 'loading' ? renderLoadingScreen() : (
           <div className="flex-grow flex flex-col justify-between h-full p-4 pt-safe pb-safe">
             <h1 className={`${instrumentSerif.className} text-3xl text-teal-500 text-center mb-0`}>FACE PACE</h1>
             <div className="flex-grow flex items-center overflow-hidden mb-4 h-[70vh] mt-2">
