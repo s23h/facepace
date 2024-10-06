@@ -301,76 +301,91 @@ app = Flask(__name__)
 def index():
     return "Hello world"
 
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
+
 @app.route('/pixtral_get_age', methods=['POST'])
 def pixtral_get_age():
-    time.sleep(3)
     data = request.get_json()
     image_url = data.get('image_url')
     video_url = data.get('video_url')
     chron_age = data.get('age')
 
-    pupil_data = json.loads(get_pupil_data(video_url))
-
     print(image_url, video_url, chron_age)
-
-    hr, sdnn, rmssd, nn50, pnn50 = process_video(video_url, "data.npz")
-    hr = float(hr)
-    sdnn = float(sdnn)
-    rmssd = float(rmssd)
-    nn50 = float(nn50)
-    pnn50 = float(pnn50)
-    print(hr)
 
     mistral = Mistral(api_key="pqmKVrIjJjkKQMhvRslPapP7QzNV2A1I")
 
-    heart_data = f"Standard Deviation of NN intervals: {sdnn} and RMSSD: Root Mean Square of Successive Differences: {rmssd} and NN50: Number of successive differences greater than 50ms: {nn50} and pNN50: Percentage of NN50: {pnn50}"
+    # Define functions to be executed concurrently
+    def get_pupil_data_async():
+        return json.loads(get_pupil_data(video_url))
 
-    combined_prompt = f"""
-    Analyze the following data and image, then output a JSON object with the following structure:
+    def process_video_async():
+        return process_video(video_url, "data.npz")
 
-    {{
-        "heart_info": "Short blurb (1 sentence) explaining their heart health in the second person based on {heart_data}",
-        "sdnn_info": "Short blurb (1 sentence) explaining their Standard Deviation of NN intervals ({sdnn}) in the second person",
-        "rmssd_info": "Short blurb (1 sentence) explaining their Root Mean Square of Successive Differences ({rmssd}) in the second person",
-        "nn50_info": "Short blurb (1 sentence) explaining the number of adjacent NN intervals that differ by more than 50 milliseconds ({nn50}) in the second person",
-        "pnn50_info": "Short blurb (1 sentence) explaining the percentage of NN intervals that differ by more than 50 milliseconds ({pnn50}) in the second person",
-        "age": "Estimated age as a single positive integer",
-        "acne": {{
-            "score": "Acne score on a scale of 1-10 (1 = severe acne, 10 = no acne)",
-            "description": "Brief description of acne presence, severity, and location"
-        }},
-        "eye_bags": {{
-            "score": "Eye bags score on a scale of 1-10 (1 = very poor sleep, 10 = very good sleep)",
-            "description": "Brief description of eye bags presence and severity"
-        }},
-        "brain_health": {{
-            "description": "Two-sentence description (using pupin coefficent of variation, estimated saccades, estimated fixations all shaved to two decimal places) of brain/cognitive health. This should be personal and give insight into cognitive function. based on the following pupil data: {pupil_data}"
+    def mistral_chat_async(pupil_data, heart_data):
+        combined_prompt = f"""
+        Analyze the following data and image, then output a JSON object with the following structure:
+
+        {{
+            "heart_info": "Short blurb (1 sentence) explaining their heart health in the second person based on {heart_data}",
+            "sdnn_info": "Short blurb (1 sentence) explaining their Standard Deviation of NN intervals ({heart_data['sdnn']}) in the second person",
+            "rmssd_info": "Short blurb (1 sentence) explaining their Root Mean Square of Successive Differences ({heart_data['rmssd']}) in the second person",
+            "nn50_info": "Short blurb (1 sentence) explaining the number of adjacent NN intervals that differ by more than 50 milliseconds ({heart_data['nn50']}) in the second person",
+            "pnn50_info": "Short blurb (1 sentence) explaining the percentage of NN intervals that differ by more than 50 milliseconds ({heart_data['pnn50']}) in the second person",
+            "age": "Estimated age as a single positive integer",
+            "acne": {{
+                "score": "Acne score on a scale of 1-10 (1 = severe acne, 10 = no acne)",
+                "description": "Brief description of acne presence, severity, and location"
+            }},
+            "eye_bags": {{
+                "score": "Eye bags score on a scale of 1-10 (1 = very poor sleep, 10 = very good sleep)",
+                "description": "Brief description of eye bags presence and severity"
+            }},
+            "brain_health": {{
+                "description": "Two-sentence description (using pupin coefficent of variation, estimated saccades, estimated fixations all shaved to two decimal places) of brain/cognitive health. This should be personal and give insight into cognitive function. based on the following pupil data: {pupil_data}"
+            }}
         }}
-    }}
 
-    Ensure all text fields are concise and do not exceed the specified sentence count. The age should be a single integer, and scores should be integers between 1 and 10.
-    """
+        Ensure all text fields are concise and do not exceed the specified sentence count. The age should be a single integer, and scores should be integers between 1 and 10.
+        """
 
-    response = mistral.chat.complete(
-        model="pixtral-12b",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": combined_prompt},
-                    {"type": "image_url", "image_url": image_url}
-                ]
+        response = mistral.chat.complete(
+            model="pixtral-12b",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": combined_prompt},
+                        {"type": "image_url", "image_url": image_url}
+                    ]
+                }
+            ],
+            response_format = {
+                "type": "json_object",
             }
-        ],
-        response_format = {
-            "type": "json_object",
-        }
-    )
+        )
+        return json.loads(response.choices[0].message.content)
 
-    try:
-        mistral_output = json.loads(response.choices[0].message.content)
-    except json.JSONDecodeError:
-        return jsonify({'error': 'Failed to parse Mistral response'}), 500
+    # Execute functions concurrently
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        pupil_data_future = executor.submit(get_pupil_data_async)
+        process_video_future = executor.submit(process_video_async)
+
+        # Wait for pupil_data and process_video to complete
+        pupil_data = pupil_data_future.result()
+        hr, sdnn, rmssd, nn50, pnn50 = process_video_future.result()
+
+        # Prepare heart_data for mistral_chat
+        heart_data = {
+            "sdnn": float(sdnn),
+            "rmssd": float(rmssd),
+            "nn50": float(nn50),
+            "pnn50": float(pnn50)
+        }
+
+        # Now execute mistral_chat with the results
+        mistral_output_future = executor.submit(mistral_chat_async, pupil_data, heart_data)
+        mistral_output = mistral_output_future.result()
 
     # Calculate pace of aging
     functional_age = int(mistral_output['age'])
@@ -381,15 +396,15 @@ def pixtral_get_age():
         'functional_age': functional_age,
         'pace_of_aging': pace_of_aging,
         'age_differential': str(int(chron_age)-int(functional_age)) + " years younger" if int(chron_age) >= int(functional_age) else str(int(functional_age)-int(chron_age)) + " years older",
-        'hr': hr,
+        'hr': float(hr),
         'heart_info': mistral_output['heart_info'],
-        'sdnn': sdnn,
+        'sdnn': float(sdnn),
         'sdnn_info': mistral_output['sdnn_info'],
-        'rmssd': rmssd,
+        'rmssd': float(rmssd),
         'rmssd_info': mistral_output['rmssd_info'],
-        'nn50': nn50,
+        'nn50': float(nn50),
         'nn50_info': mistral_output['nn50_info'],
-        'pnn50': pnn50,
+        'pnn50': float(pnn50),
         'pnn50_info': mistral_output['pnn50_info'],
         'acne': mistral_output['acne'],
         'eye_bags': mistral_output['eye_bags'],
