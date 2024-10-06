@@ -310,7 +310,7 @@ Eye bags: [score] - [brief description]"""
     print(age, chron_age)
     pace_of_aging = (float(age)/float(chron_age))
     # age_differential = str((pace_differential.choices[0].message.content))
-    age_differential = str(chron_age-age) + " years " + " younger" if int(chron_age) > int(age) else str(age-chron_age) + " years " + " older" if int(chron_age) < int(age) else " 0 years younger"
+    age_differential = str(int(chron_age)-int(age)) + " years " + " younger" if int(chron_age) > int(age) else str(int(age)-int(chron_age)) + " years " + " older" if int(chron_age) < int(age) else " 0 years younger"
     print(age_differential)
 
     return jsonify({
