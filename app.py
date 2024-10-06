@@ -31,6 +31,145 @@ def log_to_supabase(data):
     except Exception as e:
         print("Error inserting data to Supabase:", str(e))
 
+def detect_eyes(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (7, 7), 0)
+    thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    eye_regions = []
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        aspect_ratio = w / float(h)
+        if 1000 < cv2.contourArea(contour) < 5000 and 0.5 < aspect_ratio < 2.0:
+            eye_regions.append((x, y, w, h))
+    return eye_regions
+
+def detect_pupil(eye_region):
+    _, thresh = cv2.threshold(eye_region, 30, 255, cv2.THRESH_BINARY_INV)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if contours:
+        pupil = max(contours, key=cv2.contourArea)
+        return pupil
+    return None
+
+def analyze_eye_movements(video_path):
+    cap = cv2.VideoCapture(video_path)
+    pupil_sizes = []
+    eye_positions = []
+    frame_count = 0
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frame_count += 1
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        eye_regions = detect_eyes(frame)
+        for (x, y, w, h) in eye_regions:
+            eye_region = gray[y:y+h, x:x+w]
+            pupil = detect_pupil(eye_region)
+            if pupil is not None:
+                pupil_size = cv2.contourArea(pupil)
+                pupil_sizes.append(pupil_size)
+                M = cv2.moments(pupil)
+                if M["m00"] != 0:
+                    cx = int(M["m10"] / M["m00"])
+                    cy = int(M["m01"] / M["m00"])
+                    eye_positions.append((cx + x, cy + y))
+    cap.release()
+    return pupil_sizes, eye_positions, frame_count
+
+def analyze_pupil_dynamics(pupil_sizes):
+    mean_size = np.mean(pupil_sizes)
+    std_size = np.std(pupil_sizes)
+    min_size = np.min(pupil_sizes)
+    max_size = np.max(pupil_sizes)
+    coefficient_of_variation = (std_size / mean_size) * 100
+    baseline = np.percentile(pupil_sizes, 10)
+    max_dilation = max_size / baseline
+    response_amplitude = max_size - baseline
+    return {
+        "mean_size": mean_size,
+        "std_size": std_size,
+        "min_size": min_size,
+        "max_size": max_size,
+        "coefficient_of_variation": coefficient_of_variation,
+        "max_dilation": max_dilation,
+        "response_amplitude": response_amplitude
+    }
+
+def analyze_eye_movements_advanced(eye_positions, frame_rate):
+    if not eye_positions:
+        return {}
+    distances = [np.linalg.norm(np.array(eye_positions[i]) - np.array(eye_positions[i-1])) 
+                 for i in range(1, len(eye_positions))]
+    velocities = [d * frame_rate for d in distances]
+    saccade_threshold = np.percentile(velocities, 90)
+    saccades = [v for v in velocities if v > saccade_threshold]
+    fixation_threshold = np.percentile(velocities, 10)
+    fixations = [v for v in velocities if v < fixation_threshold]
+    saccadic_peak_velocity = max(velocities) if velocities else 0
+    fixation_stability = np.std(fixations) if fixations else 0
+    fixation_durations = [1/v for v in fixations] if fixations else []
+    fixation_duration_variability = np.std(fixation_durations) if fixation_durations else 0
+    return {
+        "estimated_saccades": len(saccades),
+        "estimated_fixations": len(fixations),
+        "mean_saccade_velocity": np.mean(saccades) if saccades else 0,
+        "mean_fixation_velocity": np.mean(fixations) if fixations else 0,
+        "saccadic_peak_velocity": saccadic_peak_velocity,
+        "fixation_stability_index": fixation_stability,
+        "fixation_duration_variability": fixation_duration_variability
+    }
+
+def analyze_gaze_dispersion(eye_positions):
+    if not eye_positions:
+        return {}
+    x_coords, y_coords = zip(*eye_positions)
+    x_dispersion = np.std(x_coords)
+    y_dispersion = np.std(y_coords)
+    total_dispersion = np.sqrt(x_dispersion**2 + y_dispersion**2)
+    return {
+        "x_dispersion": x_dispersion,
+        "y_dispersion": y_dispersion,
+        "total_dispersion": total_dispersion
+    }
+
+def analyze_pupil_response_time(pupil_sizes, frame_rate):
+    diff = np.diff(pupil_sizes)
+    max_change_index = np.argmax(np.abs(diff))
+    response_time = max_change_index / frame_rate
+    return response_time
+
+def get_pupil_data(video_url):
+    cap = cv2.VideoCapture(video_url)
+    frame_rate = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+    
+    pupil_sizes, eye_positions, total_frames = analyze_eye_movements(video_url)
+
+    results = {
+        "pupil_dynamics": analyze_pupil_dynamics(pupil_sizes),
+        "eye_movements": analyze_eye_movements_advanced(eye_positions, frame_rate),
+        "gaze_dispersion": analyze_gaze_dispersion(eye_positions),
+        "pupil_response_time": analyze_pupil_response_time(pupil_sizes, frame_rate),
+        "total_frames": total_frames
+    }
+
+    # Convert numpy types to Python native types for JSON serialization
+    def convert_to_serializable(obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return obj
+
+    # Serialize the results to JSON
+    json_results = json.dumps(results, indent=2)
+
+    return json_results
+
 def calculate_hrv(ts, vs):
     # Find R-peaks using scipy's find_peaks function
     r_peaks, _ = find_peaks(vs, distance=int(len(vs)/10))  # Adjust distance as needed
@@ -170,6 +309,8 @@ def pixtral_get_age():
     video_url = data.get('video_url')
     chron_age = data.get('age')
 
+    pupil_data = json.loads(get_pupil_data(video_url))
+
     print(image_url, video_url, chron_age)
 
     hr, sdnn, rmssd, nn50, pnn50 = process_video(video_url, "data.npz")
@@ -202,9 +343,12 @@ def pixtral_get_age():
             "score": "Eye bags score on a scale of 1-10 (1 = very poor sleep, 10 = very good sleep)",
             "description": "Brief description of eye bags presence and severity"
         }},
+        "brain_health": {{
+            "description": "Two-sentence description (using pupin coefficent of variation, estimated saccades, estimated fixations all shaved to two decimal places) of brain/cognitive health. This should be personal and give insight into cognitive function. based on the following pupil data: {pupil_data}"
+        }}
     }}
 
-    Ensure all text fields are concise and do not exceed one sentence each. The age should be a single integer, and scores should be integers between 1 and 10.
+    Ensure all text fields are concise and do not exceed the specified sentence count. The age should be a single integer, and scores should be integers between 1 and 10.
     """
 
     response = mistral.chat.complete(
@@ -248,7 +392,10 @@ def pixtral_get_age():
         'pnn50': pnn50,
         'pnn50_info': mistral_output['pnn50_info'],
         'acne': mistral_output['acne'],
-        'eye_bags': mistral_output['eye_bags']
+        'eye_bags': mistral_output['eye_bags'],
+        'brain_health': mistral_output['brain_health'],
+        'coefficient_pupil_variation': str(pupil_data["pupil_dynamics"]["coefficient_of_variation"]),
+        "estimated_saccades_fixations": int(int(pupil_data["eye_movements"]["estimated_saccades"])+int(pupil_data["eye_movements"]["estimated_fixations"]))
     }
     log_to_supabase(response_data)
 
