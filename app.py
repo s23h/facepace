@@ -155,6 +155,8 @@ def pixtral_get_age():
     video_url = data.get('video_url')
     chron_age = data.get('age')
 
+    print(image_url, video_url, chron_age)
+
     hr, sdnn, rmssd, nn50, pnn50 = process_video(video_url, "data.npz")
     hr = float(hr)
     sdnn = float(sdnn)
@@ -259,7 +261,7 @@ def pixtral_get_age():
                         "type": "text",
                         "text": """Examine the person in this image closely and provide the following information:
 
-1. Age: Estimate the person's age as a single number. No range and no other explanation.
+1. Age: Estimate the person's age as a single number. No range and no other explanation. It should be a positive integer and that integer should be the only thing you return for Age.
 
 2. Acne: Look for any signs of acne. Note its presence, severity, and location (e.g., forehead, cheeks, chin). Score on a scale of 1-10 (1 = severe acne, 10 = no acne).
 
@@ -313,7 +315,7 @@ Eye bags: [score] - [brief description]"""
     age_differential = str(int(chron_age)-int(age)) + " years " + " younger" if int(chron_age) > int(age) else str(int(age)-int(chron_age)) + " years " + " older" if int(chron_age) < int(age) else " 0 years younger"
     print(age_differential)
 
-    return jsonify({
+    response_data = {
         'functional_age': age,
         'pace_of_aging': pace_of_aging,
         'age_differential': age_differential,
@@ -335,7 +337,9 @@ Eye bags: [score] - [brief description]"""
             'score': eye_bags_score,
             'description': eye_bags_desc
         }
-    }), 200
+    }
+    print(response_data)
+    return jsonify(response_data), 200
     
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
