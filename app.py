@@ -4,6 +4,7 @@ import os
 from mistralai import Mistral
 import sys
 import cv2
+import time
 import scipy
 from scipy.signal import find_peaks
 import numpy as np
@@ -150,6 +151,7 @@ def index():
 
 @app.route('/pixtral_get_age', methods=['POST'])
 def pixtral_get_age():
+    time.sleep(3)
     data = request.get_json()
     image_url = data.get('image_url')
     video_url = data.get('video_url')
