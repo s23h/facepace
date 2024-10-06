@@ -259,7 +259,7 @@ def pixtral_get_age():
                         "type": "text",
                         "text": """Examine the person in this image closely and provide the following information:
 
-1. Age: Estimate the person's age as a single number.
+1. Age: Estimate the person's age as a single number. No range and no other explanation.
 
 2. Acne: Look for any signs of acne. Note its presence, severity, and location (e.g., forehead, cheeks, chin). Score on a scale of 1-10 (1 = severe acne, 10 = no acne).
 
@@ -292,23 +292,25 @@ Eye bags: [score] - [brief description]"""
     acne_score, acne_desc = parsed_analysis.get('acne', 'N/A - N/A').split(' - ', 1)
     eye_bags_score, eye_bags_desc = parsed_analysis.get('eye bags', 'N/A - N/A').split(' - ', 1)
 
-    pace_differential = mistral.chat.complete(
-        model="pixtral-12b",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Use the users calendar age: " + str(chron_age) + ". And their functional age: " + str(age) + " to get their age differential in the format your biological age is AGE_DIFFERENTIAL than your calendar age. return AGE_DIFFERENTIAL only. it should be in years and months + either younger or older depending on which is higher. Return the AGE_DIFFERENTIAL value string only. No other labels or headers."
-                    }
-                ]
-            }
-        ]
-    )
+    # pace_differential = mistral.chat.complete(
+    #     model="pixtral-12b",
+    #     messages=[
+    #         {
+    #             "role": "user",
+    #             "content": [
+    #                 {
+    #                     "type": "text",
+    #                     "text": "Use the users calendar age: " + str(chron_age) + ". And their functional age: " + str(age) + " to get their age differential in the format your biological age is AGE_DIFFERENTIAL than your calendar age. return AGE_DIFFERENTIAL only. it should be in years and months + either younger or older depending on which is higher. Return the AGE_DIFFERENTIAL value string only. No other labels or headers."
+    #                 }
+    #             ]
+    #         }
+    #     ]
+    # )
 
+    print(age, chron_age)
     pace_of_aging = (float(age)/float(chron_age))
-    age_differential = str((pace_differential.choices[0].message.content))
+    # age_differential = str((pace_differential.choices[0].message.content))
+    age_differential = str(chron_age-age) + " years " + " younger" if int(chron_age) > int(age) else str(age-chron_age) + " years " + " older" if int(chron_age) < int(age) else " 0 years younger"
     print(age_differential)
 
     return jsonify({
