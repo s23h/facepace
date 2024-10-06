@@ -12,3 +12,4 @@ mediapipe
 opencv-python
 PyQt5
 # dlib
+supabase

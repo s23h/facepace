@@ -24,6 +24,13 @@ NEXT_PUBLIC_SUPABASE_URL="https://xswosfqzsvllwgkyaivz.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzd29zZnF6c3ZsbHdna3lhaXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjgxMjEwMzksImV4cCI6MjA0MzY5NzAzOX0.Y6Bj8jdV9eEpLVMnQ56wAaXsbMry80zFH14snD9SRTI"
 supabase: Client = create_client(NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
+def log_to_supabase(data):
+    try:
+        response = supabase.table("health_metrics").insert(data).execute()
+        print("Data inserted successfully:", response.data)
+    except Exception as e:
+        print("Error inserting data to Supabase:", str(e))
+
 def calculate_hrv(ts, vs):
     # Find R-peaks using scipy's find_peaks function
     r_peaks, _ = find_peaks(vs, distance=int(len(vs)/10))  # Adjust distance as needed
@@ -243,6 +250,7 @@ def pixtral_get_age():
         'acne': mistral_output['acne'],
         'eye_bags': mistral_output['eye_bags']
     }
+    log_to_supabase(response_data)
 
     print(response_data)
     return jsonify(response_data), 200
