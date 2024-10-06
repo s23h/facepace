@@ -18,6 +18,11 @@ from yarppg.rppg.hr import HRCalculator
 from yarppg.rppg.filters import get_butterworth_filter
 import requests
 import tempfile
+from supabase import create_client, Client
+
+NEXT_PUBLIC_SUPABASE_URL="https://xswosfqzsvllwgkyaivz.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhzd29zZnF6c3ZsbHdna3lhaXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjgxMjEwMzksImV4cCI6MjA0MzY5NzAzOX0.Y6Bj8jdV9eEpLVMnQ56wAaXsbMry80zFH14snD9SRTI"
+supabase: Client = create_client(NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
 def calculate_hrv(ts, vs):
     # Find R-peaks using scipy's find_peaks function
@@ -190,7 +195,6 @@ def pixtral_get_age():
             "score": "Eye bags score on a scale of 1-10 (1 = very poor sleep, 10 = very good sleep)",
             "description": "Brief description of eye bags presence and severity"
         }},
-        "age_differential": "Age differential string (e.g., '2 years younger' or '1 year older') based on calendar age {chron_age} and estimated functional age"
     }}
 
     Ensure all text fields are concise and do not exceed one sentence each. The age should be a single integer, and scores should be integers between 1 and 10.
@@ -225,7 +229,7 @@ def pixtral_get_age():
     response_data = {
         'functional_age': functional_age,
         'pace_of_aging': pace_of_aging,
-        'age_differential': mistral_output['age_differential'],
+        'age_differential': str(int(chron_age)-int(functional_age)) + " years younger than your calendar age" if int(chron_age) >= int(functional_age) else str(int(functional_age)-int(chron_age)) + " years older than your calendar age",
         'hr': hr,
         'heart_info': mistral_output['heart_info'],
         'sdnn': sdnn,
