@@ -5,6 +5,7 @@ from mistralai import Mistral
 import sys
 import cv2
 import time
+import json
 import scipy
 from scipy.signal import find_peaks
 import numpy as np
@@ -168,90 +169,32 @@ def pixtral_get_age():
     print(hr)
 
     mistral = Mistral(api_key="pqmKVrIjJjkKQMhvRslPapP7QzNV2A1I")
-    # mistral = Mistral(api_key="OURAYTRBvuZ4rtmVs0Wlm4eRUgMsS40M")
-    # mistral = Mistral(api_key="Af76fyBsx17rFnHZQVqb8rdM9uXS3XQv")
 
-    heart_data = "Standard Deviation of NN intervals: " + str(sdnn) + " and RMSSD: Root Mean Square of Successive Differences: " + str(rmssd) + " and NN50: Number of successive differences greater than 50ms: " + str(nn50) + " and pNN50: Percentage of NN50: " + str(pnn50)
+    heart_data = f"Standard Deviation of NN intervals: {sdnn} and RMSSD: Root Mean Square of Successive Differences: {rmssd} and NN50: Number of successive differences greater than 50ms: {nn50} and pNN50: Percentage of NN50: {pnn50}"
 
-    heart_info_response = mistral.chat.complete(
-        model="pixtral-12b",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Based on " + heart_data + ". Come up with a short blurb (1 sentence max) explaining their heart health in the second person (talk to them)." 
-                    },
-                ]
-            }
-        ]
-    )
-    heart_info = heart_info_response.choices[0].message.content if heart_info_response.choices else "Failed to get heart info"
+    combined_prompt = f"""
+    Analyze the following data and image, then output a JSON object with the following structure:
 
-    sdnn_info_response = mistral.chat.complete(
-        model="pixtral-12b",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Based on " + str(sdnn) + ". Come up with a short blurb (1 sentence max) explaining their Standard Deviation of NN intervals in the second person (talk to them). Speak in context not just what SDNN means but what their score indicates"                    },
-                ]
-            }
-        ]
-    )
-    sdnn_info = sdnn_info_response.choices[0].message.content if sdnn_info_response.choices else "Failed to get heart info"
+    {{
+        "heart_info": "Short blurb (1 sentence) explaining their heart health in the second person based on {heart_data}",
+        "sdnn_info": "Short blurb (1 sentence) explaining their Standard Deviation of NN intervals ({sdnn}) in the second person",
+        "rmssd_info": "Short blurb (1 sentence) explaining their Root Mean Square of Successive Differences ({rmssd}) in the second person",
+        "nn50_info": "Short blurb (1 sentence) explaining the number of adjacent NN intervals that differ by more than 50 milliseconds ({nn50}) in the second person",
+        "pnn50_info": "Short blurb (1 sentence) explaining the percentage of NN intervals that differ by more than 50 milliseconds ({pnn50}) in the second person",
+        "age": "Estimated age as a single positive integer",
+        "acne": {{
+            "score": "Acne score on a scale of 1-10 (1 = severe acne, 10 = no acne)",
+            "description": "Brief description of acne presence, severity, and location"
+        }},
+        "eye_bags": {{
+            "score": "Eye bags score on a scale of 1-10 (1 = very poor sleep, 10 = very good sleep)",
+            "description": "Brief description of eye bags presence and severity"
+        }},
+        "age_differential": "Age differential string (e.g., '2 years younger' or '1 year older') based on calendar age {chron_age} and estimated functional age"
+    }}
 
-
-    rmssd_info_response = mistral.chat.complete(
-        model="pixtral-12b",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Based on " + str(rmssd) + ". Come up with a short blurb (1 sentence max) explaining their Root Mean Square of Successive Differences in the second person (talk to them). Speak in context not just what SDNN means but what their score indicates"                    },
-                ]
-            }
-        ]
-    )
-    rmssd_info = rmssd_info_response.choices[0].message.content if rmssd_info_response.choices else "Failed to get heart info"
-
-    nn50_info_response = mistral.chat.complete(
-        model="pixtral-12b",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Based on " + str(nn50) + ". Come up with a short blurb (1 sentence max) explaining their The number of adjacent NN (normal-to-normal) intervals that differ by more than 50 milliseconds in the second person (talk to them). Speak in context not just what SDNN means but what their score indicates"                    },
-                ]
-            }
-        ]
-    )
-    nn50_info = nn50_info_response.choices[0].message.content if nn50_info_response.choices else "Failed to get heart info"
-
-    pnn50_info_response = mistral.chat.complete(
-        model="pixtral-12b",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Based on " + str(nn50) + ". Come up with a short blurb (1 sentence max) explaining their The percentage of NN intervals that differ by more than 50 milliseconds in the second person (talk to them). Speak in context not just what SDNN means but what their score indicates"                    },
-                ]
-            }
-        ]
-    )
-    pnn50_info = pnn50_info_response.choices[0].message.content if pnn50_info_response.choices else "Failed to get heart info"
-
-    if not image_url:
-        return jsonify({'error': 'Image URL is required'}), 400
+    Ensure all text fields are concise and do not exceed one sentence each. The age should be a single integer, and scores should be integers between 1 and 10.
+    """
 
     response = mistral.chat.complete(
         model="pixtral-12b",
@@ -259,87 +202,44 @@ def pixtral_get_age():
             {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "text",
-                        "text": """Examine the person in this image closely and provide the following information:
-
-1. Age: Estimate the person's age as a single number. No range and no other explanation. It should be a positive integer and that integer should be the only thing you return for Age.
-
-2. Acne: Look for any signs of acne. Note its presence, severity, and location (e.g., forehead, cheeks, chin). Score on a scale of 1-10 (1 = severe acne, 10 = no acne).
-
-3. Eye bags: Analyze the presence and severity of eye bags and droopy eyes for poor sleep. Score on a scale of 1-10 (1 = very poor sleep, 10 = very good sleep).
-
-Provide your analysis in the following format:
-Age: [number]
-Acne: [score] - [brief description]
-Eye bags: [score] - [brief description]"""
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": image_url
-                    }
+                    {"type": "text", "text": combined_prompt},
+                    {"type": "image_url", "image_url": image_url}
                 ]
             }
-        ]
+        ],
+        response_format = {
+            "type": "json_object",
+        }
     )
 
-    analysis = response.choices[0].message.content
+    try:
+        mistral_output = json.loads(response.choices[0].message.content)
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Failed to parse Mistral response'}), 500
 
-    parsed_analysis = {}
-    for line in analysis.split('\n'):
-        if ':' in line:
-            key, value = line.split(':', 1)
-            parsed_analysis[key.strip().lower()] = value.strip()
+    # Calculate pace of aging
+    functional_age = int(mistral_output['age'])
+    pace_of_aging = functional_age / float(chron_age)
 
-    # Extract values
-    age = parsed_analysis.get('age', 'N/A')
-    acne_score, acne_desc = parsed_analysis.get('acne', 'N/A - N/A').split(' - ', 1)
-    eye_bags_score, eye_bags_desc = parsed_analysis.get('eye bags', 'N/A - N/A').split(' - ', 1)
-
-    # pace_differential = mistral.chat.complete(
-    #     model="pixtral-12b",
-    #     messages=[
-    #         {
-    #             "role": "user",
-    #             "content": [
-    #                 {
-    #                     "type": "text",
-    #                     "text": "Use the users calendar age: " + str(chron_age) + ". And their functional age: " + str(age) + " to get their age differential in the format your biological age is AGE_DIFFERENTIAL than your calendar age. return AGE_DIFFERENTIAL only. it should be in years and months + either younger or older depending on which is higher. Return the AGE_DIFFERENTIAL value string only. No other labels or headers."
-    #                 }
-    #             ]
-    #         }
-    #     ]
-    # )
-
-    print(age, chron_age)
-    pace_of_aging = (float(age)/float(chron_age))
-    # age_differential = str((pace_differential.choices[0].message.content))
-    age_differential = str(int(chron_age)-int(age)) + " years " + " younger" if int(chron_age) > int(age) else str(int(age)-int(chron_age)) + " years " + " older" if int(chron_age) < int(age) else " 0 years younger"
-    print(age_differential)
-
+    # Construct the final response
     response_data = {
-        'functional_age': age,
+        'functional_age': functional_age,
         'pace_of_aging': pace_of_aging,
-        'age_differential': age_differential,
+        'age_differential': mistral_output['age_differential'],
         'hr': hr,
-        'heart_info': heart_info,
+        'heart_info': mistral_output['heart_info'],
         'sdnn': sdnn,
-        'sdnn_info': sdnn_info,
+        'sdnn_info': mistral_output['sdnn_info'],
         'rmssd': rmssd,
-        'rmssd_info': rmssd_info,
+        'rmssd_info': mistral_output['rmssd_info'],
         'nn50': nn50,
-        'nn50_info': nn50_info,
+        'nn50_info': mistral_output['nn50_info'],
         'pnn50': pnn50,
-        'pnn50_info': pnn50_info,
-        'acne': {
-            'score': acne_score,
-            'description': acne_desc
-        },
-        'eye_bags': {
-            'score': eye_bags_score,
-            'description': eye_bags_desc
-        }
+        'pnn50_info': mistral_output['pnn50_info'],
+        'acne': mistral_output['acne'],
+        'eye_bags': mistral_output['eye_bags']
     }
+
     print(response_data)
     return jsonify(response_data), 200
     
