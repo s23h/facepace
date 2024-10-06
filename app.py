@@ -380,7 +380,7 @@ def pixtral_get_age():
     response_data = {
         'functional_age': functional_age,
         'pace_of_aging': pace_of_aging,
-        'age_differential': str(int(chron_age)-int(functional_age)) + " years younger than your calendar age" if int(chron_age) >= int(functional_age) else str(int(functional_age)-int(chron_age)) + " years older than your calendar age",
+        'age_differential': str(int(chron_age)-int(functional_age)) + " years younger" if int(chron_age) >= int(functional_age) else str(int(functional_age)-int(chron_age)) + " years older",
         'hr': hr,
         'heart_info': mistral_output['heart_info'],
         'sdnn': sdnn,
@@ -394,7 +394,7 @@ def pixtral_get_age():
         'acne': mistral_output['acne'],
         'eye_bags': mistral_output['eye_bags'],
         'brain_health': mistral_output['brain_health'],
-        'coefficient_pupil_variation': str(pupil_data["pupil_dynamics"]["coefficient_of_variation"]),
+        'coefficent_pupil_variation': str(pupil_data["pupil_dynamics"]["coefficient_of_variation"]),
         "estimated_saccades_fixations": int(int(pupil_data["eye_movements"]["estimated_saccades"])+int(pupil_data["eye_movements"]["estimated_fixations"]))
     }
     log_to_supabase(response_data)
