@@ -1,0 +1,93 @@
+{
+  "name": "FacePace",
+  "displayName": "FacePace",
+  "expo": {
+    "name": "FacePace",
+    "slug": "facepace",
+    "scheme": "facepace",
+    "owner": "salman2",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/app-icon-all.png",
+    "splash": {
+      "image": "./assets/images/splash-logo-all.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#191015"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "jsEngine": "hermes",
+    "assetBundlePatterns": ["**/*"],
+    "android": {
+      "icon": "./assets/images/app-icon-android-legacy.png",
+      "package": "com.facepace.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/app-icon-android-adaptive-foreground.png",
+        "backgroundImage": "./assets/images/app-icon-android-adaptive-background.png"
+      },
+      "splash": {
+        "image": "./assets/images/splash-logo-android-universal.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#191015"
+      }
+    },
+    "ios": {
+      "icon": "./assets/images/app-icon-ios.png",
+      "supportsTablet": true,
+      "bundleIdentifier": "com.facepace.app",
+      "splash": {
+        "image": "./assets/images/splash-logo-ios-mobile.png",
+        "tabletImage": "./assets/images/splash-logo-ios-tablet.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#191015"
+      },
+      "usesAppleSignIn": true
+    },
+    "web": {
+      "favicon": "./assets/images/app-icon-web-favicon.png",
+      "splash": {
+        "image": "./assets/images/splash-logo-web.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#191015"
+      },
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-localization",
+      "expo-secure-store",
+      "expo-apple-authentication",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "newArchEnabled": true,
+            "deploymentTarget": "13.4"
+          },
+          "android": {
+            "newArchEnabled": true
+          }
+        }
+      ],
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "$(PRODUCT_NAME) needs access to your Camera to analyse your health",
+          "enableCodeScanner": true
+        }
+      ],
+      "expo-font"
+    ],
+    "experiments": {
+      "tsconfigPaths": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "49b40efc-2819-4a18-a9a8-876a60189045"
+      }
+    }
+  },
+  "ignite": {
+    "version": "9.10.1"
+  }
+}

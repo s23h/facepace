@@ -1,0 +1,61 @@
+// React Native Expo Ignite .cursorrules
+
+// React Native Expo Ignite best practices
+const reactNativeExpoIgniteBestPractices = [
+  "Use functional components with hooks",
+  "Utilize Expo SDK features and APIs",
+  "Implement navigation using React Navigation as set up in app/navigators",
+  "Use assets from the assets/ directory for images and icons",
+  "Implement error handling using the ErrorBoundary in app/screens/ErrorScreen",
+  "Use MobX State Tree for state management as set up in app/models",
+  "Follow the established component structure in app/components",
+  "Use the theme system defined in app/theme for consistent styling",
+];
+
+// Folder structure (based on your project)
+const folderStructure = `
+app/
+  components/
+  config/
+  i18n/
+  models/
+  navigators/
+  screens/
+  services/
+  theme/
+  utils/
+  app.tsx
+assets/
+  icons/
+  images/
+ignite/
+  templates/
+test/
+`;
+
+// Additional instructions
+const additionalInstructions = `
+1. Use TypeScript for all new files
+2. Implement styling using the typography and spacing from app/theme
+3. Utilize the Icon component for vector icons
+4. Use Expo's SecureStore for sensitive data (implement in app/utils if needed)
+5. Implement API calls using the api service in app/services/api
+6. Follow the established patterns for creating new screens and components
+7. Use the translate function from app/i18n for internationalization
+8. Extend models in app/models for new data structures
+9. Add new navigation routes in app/navigators/AppNavigator.tsx
+10. Use Expo's OTA updates for quick deployments
+11. Write tests for new functionality in the test/ directory
+`;
+
+// Specific rules for this project
+const projectSpecificRules = `
+1. Use the Screen component from app/components for new screens
+2. Extend the RootStore in app/models/RootStore.ts for new global state
+3. Use the Button component from app/components for consistent button styling
+4. Implement new forms using the TextField component from app/components
+5. Use the ListView component for optimized list rendering
+6. Follow the established patterns in app/screens for creating new screens
+7. Use the ErrorBoundary component for catching and displaying errors
+8. Implement new API endpoints in app/services/api/api.ts
+`;
