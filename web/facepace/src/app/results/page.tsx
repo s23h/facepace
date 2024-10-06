@@ -8,18 +8,20 @@ import { Instrument_Serif } from 'next/font/google';
 import axios from 'axios';
 import { Drawer } from 'vaul';
 
+// Add this import for the question mark icon
+import { FaQuestionCircle } from 'react-icons/fa';
+
 const instrumentSerif = Instrument_Serif({ subsets: ['latin'], weight: '400' });
 
 interface LeaderboardEntry {
   id: string;
   name: string;
-  functional_age: number;
   image_url: string;
   created_at: string;
+  pace_of_aging: number;
 }
 
 interface AgingStatus {
-  value: number;
   label: string;
   scale: {
     label: string;
@@ -29,23 +31,59 @@ interface AgingStatus {
 }
 
 const AGING_STATUS: AgingStatus = {
-  value: 25, // This value should be between 0 and 100
   label: "Reduced",
   scale: [
     {
       label: "Reduced",
       color: "#34D399",
-      range: [0, 33]
+      range: [0.5, 0.9]
     },
     {
       label: "Average",
       color: "#9CA3AF",
-      range: [34, 66]
+      range: [0.9, 1.1]
     },
     {
       label: "Accelerated",
       color: "#EF4444",
-      range: [67, 100]
+      range: [1.1, 1.5]
+    }
+  ]
+};
+
+// Add this new interface for heart health status
+interface HeartHealthStatus {
+  label: string;
+  scale: {
+    label: string;
+    color: string;
+    range: [number, number];
+  }[];
+}
+
+// Add this new constant for heart health status
+const HEART_HEALTH_STATUS: HeartHealthStatus = {
+  label: "Heart Rate",
+  scale: [
+    {
+      label: "Low",
+      color: "#3B82F6", // Blue
+      range: [40, 60]
+    },
+    {
+      label: "Normal",
+      color: "#34D399", // Green
+      range: [60, 100]
+    },
+    {
+      label: "Elevated",
+      color: "#FBBF24", // Yellow
+      range: [100, 120]
+    },
+    {
+      label: "High",
+      color: "#EF4444", // Red
+      range: [120, 160]
     }
   ]
 };
@@ -82,6 +120,10 @@ function ResultsContent() {
   const totalCards = 4;
   const [analysisStatus, setAnalysisStatus] = useState<'idle' | 'loading' | 'complete'>('idle');
   const apiCallRef = useRef(false);
+
+  // Add this new state for the info drawer
+  const [infoDrawerContent, setInfoDrawerContent] = useState<{ title: string; content: string } | null>(null);
+  const [isInfoDrawerOpen, setIsInfoDrawerOpen] = useState(false);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -133,7 +175,7 @@ function ResultsContent() {
       const { error } = await supabase
         .from('leaderboard')
         .insert([
-          { name: userName, functional_age: Number(analysisResult.functional_age), image_url: imageUrl }
+          { name: userName, pace_of_aging: Number(analysisResult.pace_of_aging), image_url: imageUrl }
         ]);
 
       if (error) throw error;
@@ -150,7 +192,7 @@ function ResultsContent() {
       const { data, error } = await supabase
         .from('leaderboard')
         .select('*')
-        .order('functional_age', { ascending: true });
+        .order('pace_of_aging', { ascending: true });
 
       if (error) throw error;
 
@@ -179,6 +221,15 @@ function ResultsContent() {
   };
 
   const renderScalingBar = () => {
+    if (!analysisResult) return null;
+
+    const paceOfAging = analysisResult.pace_of_aging;
+    const minValue = AGING_STATUS.scale[0].range[0];
+    const maxValue = AGING_STATUS.scale[AGING_STATUS.scale.length - 1].range[1];
+    
+    // Calculate the percentage for positioning the indicator
+    const percentage = ((paceOfAging - minValue) / (maxValue - minValue)) * 100;
+
     return (
       <div className="mt-10">
         <div className="flex justify-between mb-2">
@@ -186,26 +237,92 @@ function ResultsContent() {
             <span key={item.label} className="text-sm text-gray-500">{item.label}</span>
           ))}
         </div>
-        <div className="h-2 flex">
-          {AGING_STATUS.scale.map((item) => (
+        <div className="h-2 flex relative">
+          {AGING_STATUS.scale.map((item, index) => (
             <div
               key={item.label}
-              className="flex-1"
+              className="flex-1 relative"
               style={{ backgroundColor: item.color }}
-            />
+            >
+              {index === 0 && (
+                <span className="absolute top-4 left-0 text-xs text-gray-500 transform -translate-x-1/2">
+                  {item.range[0]}
+                </span>
+              )}
+              {index === Math.floor(AGING_STATUS.scale.length / 2) && (
+                <span className="absolute top-4 left-1/2 text-xs text-gray-500 transform -translate-x-1/2">
+                  1.0
+                </span>
+              )}
+            </div>
           ))}
-        </div>
-        <div className="relative h-4">
+          <span className="absolute top-4 right-0 text-xs text-gray-500 transform translate-x-1/2">
+            {maxValue}
+          </span>
           <div
-            className="absolute w-0 h-0 border-solid border-x-8 border-x-transparent border-b-[16px]"
+            className="absolute w-0 h-0 border-solid border-x-8 border-x-transparent border-t-[16px] top-full"
             style={{
-              borderBottomColor: 'black',
-              left: `${AGING_STATUS.value}%`,
-              transform: 'translateX(-50%)'
+              borderTopColor: 'black',
+              left: `${percentage}%`,
+              transform: 'translateX(-50%) rotate(180deg)'
             }}
           />
         </div>
-        <p className="text-center mt-2 text-gray-500">Your aging: <span className="font-bold">{AGING_STATUS.label}</span></p>
+        <p className="text-center mt-8 text-gray-500">
+          Your Aging: <span className="font-bold">{paceOfAging.toFixed(2)}</span>
+        </p>
+      </div>
+    );
+  };
+
+  const renderHeartHealthScalingBar = () => {
+    if (!analysisResult) return null;
+
+    const heartRate = analysisResult.hr;
+    const minValue = HEART_HEALTH_STATUS.scale[0].range[0];
+    const maxValue = HEART_HEALTH_STATUS.scale[HEART_HEALTH_STATUS.scale.length - 1].range[1];
+    
+    // Calculate the percentage for positioning the indicator
+    const percentage = ((heartRate - minValue) / (maxValue - minValue)) * 100;
+
+    return (
+      <div className="mt-10">
+        <div className="flex justify-between mb-2">
+          {HEART_HEALTH_STATUS.scale.map((item) => (
+            <span key={item.label} className="text-sm text-gray-500">{item.label}</span>
+          ))}
+        </div>
+        <div className="h-2 flex relative">
+          {HEART_HEALTH_STATUS.scale.map((item, index) => (
+            <div
+              key={item.label}
+              className="flex-1 relative"
+              style={{ backgroundColor: item.color }}
+            >
+              {index === 0 && (
+                <span className="absolute top-4 left-0 text-xs text-gray-500 transform -translate-x-1/2">
+                  {item.range[0]}
+                </span>
+              )}
+              {index === HEART_HEALTH_STATUS.scale.length - 1 && (
+                <span className="absolute top-4 right-0 text-xs text-gray-500 transform translate-x-1/2">
+                  {item.range[1]}
+                </span>
+              )}
+            </div>
+          ))}
+          <div
+            className="absolute w-0 h-0 border-solid border-x-8 border-x-transparent border-t-[16px] top-full"
+            style={{
+              borderTopColor: 'black',
+              left: `${percentage}%`,
+              transform: 'translateX(-50%) rotate(180deg)'
+            }}
+          />
+        </div>
+        <p className="text-center mt-8 text-gray-500">
+          Your Heart Rate: <span className="font-bold">{heartRate.toFixed(0)} bpm</span>
+        </p>
       </div>
     );
   };
@@ -234,7 +351,7 @@ function ResultsContent() {
                   />
                 </div>
                 <span className="flex-grow text-gray-800">{entry.name}</span>
-                <span className="font-semibold text-gray-800">{entry.functional_age}</span>
+                <span className="font-semibold text-gray-800">{entry.pace_of_aging.toFixed(2)}</span>
               </div>
             ))}
           </div>
@@ -242,6 +359,11 @@ function ResultsContent() {
       </div>
     </div>
   );
+
+  const openInfoDrawer = (title: string, content: string) => {
+    setInfoDrawerContent({ title, content });
+    setIsInfoDrawerOpen(true);
+  };
 
   const renderAnalysisCards = () => {
     if (!analysisResult) return null;
@@ -252,7 +374,16 @@ function ResultsContent() {
         <div className="snap-center shrink-0 w-full flex-none h-[80vh] flex items-center">
           <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full h-full border-teal-500 border-2 overflow-y-auto">
             <div className={`${instrumentSerif.className}`}>
-              <p className="text-3xl mb-2 text-gray-900">Your Pace of Ageing</p>
+              <div className="flex items-center mb-2">
+                <p className="text-3xl text-gray-900">Your Pace of Aging</p>
+                <FaQuestionCircle 
+                  className="ml-2 text-teal-500 cursor-pointer text-xl" 
+                  onClick={() => openInfoDrawer(
+                    "Pace of Aging",
+                    "Pace of Aging is a measure of how quickly you're aging compared to the average person. A value of 1.0 means you're aging at an average rate. Values below 1.0 indicate slower aging, while values above 1.0 suggest faster aging. This is calculated based on various biomarkers including heart rate variability, skin health, and other physiological indicators."
+                  )}
+                />
+              </div>
               <p className="text-8xl font-bold text-teal-500 my-4">{Number(analysisResult.pace_of_aging).toFixed(2)}</p>
               <p className="text-3xl text-gray-900">
                 Your{' '}
@@ -275,7 +406,16 @@ function ResultsContent() {
         <div className="snap-center shrink-0 w-full flex-none h-[80vh] flex items-center">
           <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full h-full border-teal-500 border-2 overflow-y-auto">
             <div className={`${instrumentSerif.className}`}>
-              <h2 className="text-3xl mb-4 text-gray-900">Your Heart Health</h2>
+              <div className="flex items-center mb-4">
+                <h2 className="text-3xl text-gray-900">Your Heart Health</h2>
+                <FaQuestionCircle 
+                  className="ml-2 text-teal-500 cursor-pointer text-xl" 
+                  onClick={() => openInfoDrawer(
+                    "Heart Health",
+                    "Heart Health is assessed through Heart Rate Variability (HRV) analysis. HRV is the variation in time between successive heartbeats and is a key indicator of overall health and fitness. Higher HRV generally indicates better cardiovascular fitness and more resilience to stress. This is calculated using advanced algorithms that analyze the subtle changes in your facial skin color that correspond to your heartbeats."
+                  )}
+                />
+              </div>
               <div className="flex items-baseline mb-4">
                 <span className="text-8xl font-bold text-teal-500">{analysisResult.hr.toFixed(0)}</span>
                 <span className="text-4xl ml-2 text-teal-500">bpm</span>
@@ -299,7 +439,7 @@ function ResultsContent() {
                   <p className="text-sm text-gray-500">sdnn</p>
                 </Drawer.Trigger>
               </div>
-              {renderScalingBar()}
+              {renderHeartHealthScalingBar()}
             </div>
           </div>
         </div>
@@ -308,7 +448,16 @@ function ResultsContent() {
         <div className="snap-center shrink-0 w-full flex-none h-[80vh] flex items-center">
           <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full h-full border-teal-500 border-2 overflow-y-auto">
             <div className={`${instrumentSerif.className}`}>
-              <p className="text-3xl mb-2 text-gray-900 ">Your Face Insights</p>
+              <div className="flex items-center mb-2">
+                <p className="text-3xl text-gray-900">Your Face Insights</p>
+                <FaQuestionCircle 
+                  className="ml-2 text-teal-500 cursor-pointer text-xl" 
+                  onClick={() => openInfoDrawer(
+                    "Face Insights",
+                    "Face Insights provide an analysis of your skin health and sleep quality based on visual cues from your facial image. This includes assessments of acne and eye bags, which can be indicators of overall health, stress levels, and sleep quality. The analysis is performed using advanced computer vision algorithms that detect and evaluate various facial features and skin conditions."
+                  )}
+                />
+              </div>
               <div className="space-y-4">
                 <div>
                   <p className="text-2xl text-gray-900">Acne - <span className="text-xl text-teal-500">{analysisResult.acne.score}/10</span></p>
@@ -356,6 +505,19 @@ function ResultsContent() {
   };
 
   const renderDrawerContent = () => {
+    if (infoDrawerContent) {
+      return (
+        <>
+          <Drawer.Title className={`${instrumentSerif.className} font-medium mb-2 text-gray-900 text-2xl`}>
+            {infoDrawerContent.title}
+          </Drawer.Title>
+          <p className="text-gray-600 mb-8">
+            {infoDrawerContent.content}
+          </p>
+        </>
+      );
+    }
+
     if (!analysisResult || !selectedMetric) return null;
 
     const metricInfo = {
@@ -410,11 +572,11 @@ function ResultsContent() {
   );
 
   return (
-    <Drawer.Root>
+    <Drawer.Root open={isInfoDrawerOpen} onOpenChange={setIsInfoDrawerOpen}>
       <main className="relative w-full h-screen flex flex-col justify-between overflow-hidden bg-custom-bg">
         {analysisStatus === 'loading' ? renderLoadingScreen() : (
           <div className="flex-grow flex flex-col justify-between h-full p-4 pt-safe pb-safe">
-            <h1 className={`${instrumentSerif.className} text-3xl text-teal-500 text-center mb-0`}>FACE PACE</h1>
+            <h1 className={`${instrumentSerif.className} text-3xl text-teal-500 text-center mb-0 mt-2`}>Face Pace</h1>
             <div className="flex-grow flex items-center overflow-hidden mb-4 h-[70vh] mt-2">
               <div className="relative w-full max-w-md mx-auto h-full flex items-center">
                 <div 
