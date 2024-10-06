@@ -107,8 +107,15 @@ interface AnalysisResult {
   brain_health: {
     description: string;
   };
-  pupil_coefficent_variation: string;
+  coefficent_pupil_variation: string;
   estimated_saccades_fixations: number;
+}
+
+interface InfoDrawerContent {
+  title: string;
+  content: string;
+  calculation: string;
+  sources: Array<{ name: string; url: string }>;
 }
 
 function ResultsContent() {
@@ -131,7 +138,7 @@ function ResultsContent() {
   const [isMetricDrawerOpen, setIsMetricDrawerOpen] = useState(false);
 
   // Add this new state for the info drawer
-  const [infoDrawerContent, setInfoDrawerContent] = useState<{ title: string; content: string } | null>(null);
+  const [infoDrawerContent, setInfoDrawerContent] = useState<InfoDrawerContent | null>(null);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -337,9 +344,9 @@ function ResultsContent() {
 
   const renderLeaderboardCard = () => (
     <div className="snap-center shrink-0 w-full flex-none h-[80vh] flex items-center">
-      <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full h-full border-teal-500 border-2 overflow-y-auto">
+      <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full h-full border-teal-500 border-2 overflow-y-auto scrollbar-hide">
         <div className={`${instrumentSerif.className}`}>
-          <h2 className="text-3xl mb-4 text-gray-900">Leaderboard</h2>
+          <h2 className="text-3xl mb-4 text-gray-900">Pace of Aging Leaderboard</h2>
           {userRank && userRank > 10 && (
             <div className="mt-4 p-2 bg-teal-500 rounded mb-4">
               <p className="text-white">Your rank: {userRank}</p>
@@ -368,12 +375,12 @@ function ResultsContent() {
     </div>
   );
 
-  const openInfoDrawer = (title: string, content: string, event?: React.MouseEvent) => {
+  const openInfoDrawer = (title: string, content: string, calculation: string, sources: Array<{ name: string; url: string }>, event?: React.MouseEvent) => {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    setInfoDrawerContent({ title, content });
+    setInfoDrawerContent({ title, content, calculation, sources });
     setIsInfoDrawerOpen(true);
   };
 
@@ -402,6 +409,11 @@ function ResultsContent() {
                   onClick={(e) => openInfoDrawer(
                     "Pace of Aging",
                     "Pace of Aging is a measure of how quickly you're aging compared to the average person. A value of 1.0 means you're aging at an average rate. Values below 1.0 indicate slower aging, while values above 1.0 suggest faster aging. This is calculated based on various biomarkers including heart rate variability, skin health, and other physiological indicators.",
+                    "We calculate the Pace of Aging by analyzing multiple biomarkers, including heart rate variability, skin condition, and other physiological indicators. These measurements are compared to a large database of age-matched individuals to determine how your aging rate compares to the average.",
+                    [
+                      { name: "Zalay et al. (2015) [Harvard]", url: "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10516042/" },
+                      { name: "Levine et al. (2018)", url: "https://www.aging-us.com/article/101414/text" }
+                    ],
                     e
                   )}
                 />
@@ -435,6 +447,11 @@ function ResultsContent() {
                   onClick={(e) => openInfoDrawer(
                     "Heart Health",
                     "Heart Health is assessed through Heart Rate Variability (HRV) analysis. HRV is the variation in time between successive heartbeats and is a key indicator of overall health and fitness. Higher HRV generally indicates better cardiovascular fitness and more resilience to stress. This is calculated using advanced algorithms that analyze the subtle changes in your facial skin color that correspond to your heartbeats.",
+                    "We use a technique called remote photoplethysmography (rPPG) to detect subtle color changes in your facial skin that correspond to your heartbeats. This allows us to measure your heart rate and calculate various HRV metrics without the need for physical contact.",
+                    [
+                      { name: "Shaffer & Ginsberg (2017)", url: "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5624990/" },
+                      { name: "Poh et al. (2010)", url: "https://optics.spiedigitallibrary.org/article.aspx?articleid=1096221" }
+                    ],
                     e
                   )}
                 />
@@ -478,6 +495,11 @@ function ResultsContent() {
                   onClick={(e) => openInfoDrawer(
                     "Face and Brain Insights",
                     "This analysis provides insights into your skin health, sleep quality, and brain health based on visual cues from your facial image and eye movements. It includes assessments of acne, eye bags, pupil variability, and eye movement patterns, which can be indicators of overall health, stress levels, sleep quality, and cognitive function.",
+                    "We use advanced computer vision and machine learning algorithms to analyze various features of your face and eyes. This includes detecting acne, assessing the prominence of eye bags, measuring pupil size variations, and tracking eye movements. These visual cues are then correlated with known indicators of health, sleep quality, and cognitive function.",
+                    [
+                      { name: "Borza et al. (2018)", url: "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6213953/" },
+                      { name: "Holmqvist et al. (2011)", url: "https://link.springer.com/book/10.1007/978-1-84996-159-3" }
+                    ],
                     e
                   )}
                 />
@@ -488,10 +510,8 @@ function ResultsContent() {
                   <p className="text-lg text-gray-500">{analysisResult.brain_health.description}</p>
                 </div>
                 <div>
-                  <p className="text-lg text-gray-900">Pupil Coefficient of Variation - <span className="text-teal-500 text-2xl">{analysisResult.pupil_coefficent_variation}</span></p>
-                </div>
-                <div>
-                  <p className="text-lg text-gray-900">Estimated Saccades and Fixations - <span className="text-teal-500 text-2xl">{analysisResult.estimated_saccades_fixations}</span></p>
+                  <p className="text-lg text-gray-900">Coefficient of Pupil Variation - <span className="text-teal-500 text-xl">{parseFloat(analysisResult.coefficent_pupil_variation).toFixed(2)}</span></p>
+                  <p className="text-lg text-gray-900">Estimated Saccades and Fixations - <span className="text-teal-500 text-xl">{analysisResult.estimated_saccades_fixations}</span></p>
                 </div>
                 <div>
                   <p className="text-2xl text-gray-900">Acne - <span className="text-xl text-teal-500">{analysisResult.acne.score}/10</span></p>
@@ -545,9 +565,44 @@ function ResultsContent() {
         <Drawer.Title className={`${instrumentSerif.className} font-medium mb-2 text-gray-900 text-2xl`}>
           {infoDrawerContent.title}
         </Drawer.Title>
-        <p className="text-gray-600 mb-8">
+        <p className="text-gray-600 mb-4">
           {infoDrawerContent.content}
         </p>
+        <h3 className={`${instrumentSerif.className} text-2xl font-medium text-gray-800 mb-2`}>How we calculate it</h3>
+        <p className="text-gray-600 mb-8">
+          {infoDrawerContent.calculation}
+        </p>
+        <div className="border-t border-gray-200 p-4 bg-white mt-auto">
+          <div className="flex gap-6 justify-end max-w-md mx-auto">
+            {infoDrawerContent.sources.map((source, index) => (
+              <a
+                key={index}
+                href={source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-gray-600 flex items-center gap-0.25 hover:text-teal-500 transition-colors"
+              >
+                {source.name}
+                <svg
+                  fill="none"
+                  height="16"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  width="16"
+                  aria-hidden="true"
+                  className="w-3 h-3 ml-1"
+                >
+                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path>
+                  <path d="M15 3h6v6"></path>
+                  <path d="M10 14L21 3"></path>
+                </svg>
+              </a>
+            ))}
+          </div>
+        </div>
       </>
     );
   };
@@ -600,7 +655,7 @@ function ResultsContent() {
       <div className={`${instrumentSerif.className} text-center`}>
         <h1 className="text-4xl text-teal-500 mb-8">Face Pace</h1>
         <div className="inline-block animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-teal-500 mb-8"></div>
-        <p className="text-2xl text-teal-500 font-semibold">Analyzing your results...</p>
+        <p className="text-2xl text-teal-500">Analyzing your results...</p>
         <p className="text-lg text-gray-600 mt-4">This may take a few moments</p>
       </div>
     </div>
@@ -612,12 +667,12 @@ function ResultsContent() {
         <main className="relative w-full h-screen flex flex-col justify-between overflow-hidden bg-custom-bg">
           {analysisStatus === 'loading' ? renderLoadingScreen() : (
             <div className="flex-grow flex flex-col justify-between h-full p-4 pt-safe pb-safe">
-              <h1 className={`${instrumentSerif.className} text-3xl text-teal-500 text-center mb-0 mt-2`}>Face Pace</h1>
+              <h1 className={`${instrumentSerif.className} text-3xl text-teal-500 text-center mb-0 mt-0 lg:mt-6`}>Face Pace</h1>
               <div className="flex-grow flex items-center overflow-hidden mb-4 h-[70vh] mt-2">
                 <div className="relative w-full max-w-md mx-auto h-full flex items-center">
                   <div 
                     ref={cardsContainerRef} 
-                    className="overflow-x-auto snap-x snap-mandatory flex w-full h-full scrollbar-hide"
+                    className="overflow-x-auto overflow-y-hidden snap-x snap-mandatory flex w-full h-full scrollbar-hide"
                   >
                     {renderAnalysisCards()}
                   </div>
