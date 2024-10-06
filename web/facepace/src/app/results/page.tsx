@@ -104,6 +104,11 @@ interface AnalysisResult {
   rmssd_info: string;
   sdnn: number;
   sdnn_info: string;
+  brain_health: {
+    description: string;
+  };
+  pupil_coefficent_variation: string;
+  estimated_saccades_fixations: number;
 }
 
 function ResultsContent() {
@@ -121,9 +126,12 @@ function ResultsContent() {
   const [analysisStatus, setAnalysisStatus] = useState<'idle' | 'loading' | 'complete'>('idle');
   const apiCallRef = useRef(false);
 
+  // Separate drawer states for info and metrics
+  const [isInfoDrawerOpen, setIsInfoDrawerOpen] = useState(false);
+  const [isMetricDrawerOpen, setIsMetricDrawerOpen] = useState(false);
+
   // Add this new state for the info drawer
   const [infoDrawerContent, setInfoDrawerContent] = useState<{ title: string; content: string } | null>(null);
-  const [isInfoDrawerOpen, setIsInfoDrawerOpen] = useState(false);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -360,9 +368,22 @@ function ResultsContent() {
     </div>
   );
 
-  const openInfoDrawer = (title: string, content: string) => {
+  const openInfoDrawer = (title: string, content: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
     setInfoDrawerContent({ title, content });
     setIsInfoDrawerOpen(true);
+  };
+
+  const openMetricDrawer = (metric: string, event?: React.MouseEvent) => {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    setSelectedMetric(metric);
+    setIsMetricDrawerOpen(true);
   };
 
   const renderAnalysisCards = () => {
@@ -378,21 +399,22 @@ function ResultsContent() {
                 <p className="text-3xl text-gray-900">Your Pace of Aging</p>
                 <FaQuestionCircle 
                   className="ml-2 text-teal-500 cursor-pointer text-xl" 
-                  onClick={() => openInfoDrawer(
+                  onClick={(e) => openInfoDrawer(
                     "Pace of Aging",
-                    "Pace of Aging is a measure of how quickly you're aging compared to the average person. A value of 1.0 means you're aging at an average rate. Values below 1.0 indicate slower aging, while values above 1.0 suggest faster aging. This is calculated based on various biomarkers including heart rate variability, skin health, and other physiological indicators."
+                    "Pace of Aging is a measure of how quickly you're aging compared to the average person. A value of 1.0 means you're aging at an average rate. Values below 1.0 indicate slower aging, while values above 1.0 suggest faster aging. This is calculated based on various biomarkers including heart rate variability, skin health, and other physiological indicators.",
+                    e
                   )}
                 />
               </div>
               <p className="text-8xl font-bold text-teal-500 my-4">{Number(analysisResult.pace_of_aging).toFixed(2)}</p>
               <p className="text-3xl text-gray-900">
                 Your{' '}
-                <Drawer.Trigger 
-                  onClick={() => setSelectedMetric('functional_age')}
+                <span 
+                  onClick={(e) => openMetricDrawer('functional_age', e)}
                   className="underline cursor-pointer"
                 >
                   functional age
-                </Drawer.Trigger>{' '}
+                </span>{' '}
                 is {analysisResult.functional_age}, this makes you
                 <span className="text-teal-500"> {analysisResult.age_differential} </span>
                 than your calendar age.
@@ -410,9 +432,10 @@ function ResultsContent() {
                 <h2 className="text-3xl text-gray-900">Your Heart Health</h2>
                 <FaQuestionCircle 
                   className="ml-2 text-teal-500 cursor-pointer text-xl" 
-                  onClick={() => openInfoDrawer(
+                  onClick={(e) => openInfoDrawer(
                     "Heart Health",
-                    "Heart Health is assessed through Heart Rate Variability (HRV) analysis. HRV is the variation in time between successive heartbeats and is a key indicator of overall health and fitness. Higher HRV generally indicates better cardiovascular fitness and more resilience to stress. This is calculated using advanced algorithms that analyze the subtle changes in your facial skin color that correspond to your heartbeats."
+                    "Heart Health is assessed through Heart Rate Variability (HRV) analysis. HRV is the variation in time between successive heartbeats and is a key indicator of overall health and fitness. Higher HRV generally indicates better cardiovascular fitness and more resilience to stress. This is calculated using advanced algorithms that analyze the subtle changes in your facial skin color that correspond to your heartbeats.",
+                    e
                   )}
                 />
               </div>
@@ -422,49 +445,59 @@ function ResultsContent() {
               </div>
               <p className="text-lg mb-6 text-gray-900">{analysisResult.heart_info}</p>
               <div className="grid grid-cols-4 gap-4 text-center">
-                <Drawer.Trigger onClick={() => setSelectedMetric('nn50')}>
+                <div onClick={() => openMetricDrawer('nn50')} className="cursor-pointer">
                   <p className="text-3xl text-teal-500">{analysisResult.nn50.toFixed(1)}</p>
                   <p className="text-sm text-gray-500">nn50</p>
-                </Drawer.Trigger>
-                <Drawer.Trigger onClick={() => setSelectedMetric('pnn50')}>
+                </div>
+                <div onClick={() => openMetricDrawer('pnn50')} className="cursor-pointer">
                   <p className="text-3xl text-teal-500">{analysisResult.pnn50.toFixed(0)}%</p>
                   <p className="text-sm text-gray-500">pnn50</p>
-                </Drawer.Trigger>
-                <Drawer.Trigger onClick={() => setSelectedMetric('rmssd')}>
+                </div>
+                <div onClick={() => openMetricDrawer('rmssd')} className="cursor-pointer">
                   <p className="text-3xl text-teal-500">{analysisResult.rmssd.toFixed(0)}</p>
                   <p className="text-sm text-gray-500">rmssd</p>
-                </Drawer.Trigger>
-                <Drawer.Trigger onClick={() => setSelectedMetric('sdnn')}>
+                </div>
+                <div onClick={() => openMetricDrawer('sdnn')} className="cursor-pointer">
                   <p className="text-3xl text-teal-500">{analysisResult.sdnn.toFixed(0)}</p>
                   <p className="text-sm text-gray-500">sdnn</p>
-                </Drawer.Trigger>
+                </div>
               </div>
               {renderHeartHealthScalingBar()}
             </div>
           </div>
         </div>
 
-        {/* Skin Analysis Card */}
+        {/* Update the Skin Analysis Card to Face and Brain Insights */}
         <div className="snap-center shrink-0 w-full flex-none h-[80vh] flex items-center">
           <div className="bg-custom-bg rounded-lg shadow-lg p-6 m-2 w-full h-full border-teal-500 border-2 overflow-y-auto">
             <div className={`${instrumentSerif.className}`}>
               <div className="flex items-center mb-2">
-                <p className="text-3xl text-gray-900">Your Face Insights</p>
+                <p className="text-3xl text-gray-900">Your Face and Brain Insights</p>
                 <FaQuestionCircle 
                   className="ml-2 text-teal-500 cursor-pointer text-xl" 
-                  onClick={() => openInfoDrawer(
-                    "Face Insights",
-                    "Face Insights provide an analysis of your skin health and sleep quality based on visual cues from your facial image. This includes assessments of acne and eye bags, which can be indicators of overall health, stress levels, and sleep quality. The analysis is performed using advanced computer vision algorithms that detect and evaluate various facial features and skin conditions."
+                  onClick={(e) => openInfoDrawer(
+                    "Face and Brain Insights",
+                    "This analysis provides insights into your skin health, sleep quality, and brain health based on visual cues from your facial image and eye movements. It includes assessments of acne, eye bags, pupil variability, and eye movement patterns, which can be indicators of overall health, stress levels, sleep quality, and cognitive function.",
+                    e
                   )}
                 />
               </div>
-              <div className="space-y-4">
+              <div className="space-y-4 mt-6">
+                <div>
+                  <p className="text-2xl text-gray-900">Brain Health</p>
+                  <p className="text-lg text-gray-500">{analysisResult.brain_health.description}</p>
+                </div>
+                <div>
+                  <p className="text-lg text-gray-900">Pupil Coefficient of Variation - <span className="text-teal-500 text-2xl">{analysisResult.pupil_coefficent_variation}</span></p>
+                </div>
+                <div>
+                  <p className="text-lg text-gray-900">Estimated Saccades and Fixations - <span className="text-teal-500 text-2xl">{analysisResult.estimated_saccades_fixations}</span></p>
+                </div>
                 <div>
                   <p className="text-2xl text-gray-900">Acne - <span className="text-xl text-teal-500">{analysisResult.acne.score}/10</span></p>
                   <p className="text-lg text-gray-500">{analysisResult.acne.description}</p>
                 </div>
                 <div>
-                  
                   <p className="text-2xl text-gray-900">Sleep - <span className="text-xl text-teal-500">{analysisResult.eye_bags.score}/10</span></p>
                   <p className="text-lg text-gray-500">{analysisResult.eye_bags.description}</p>
                 </div>
@@ -504,20 +537,22 @@ function ResultsContent() {
     );
   };
 
-  const renderDrawerContent = () => {
-    if (infoDrawerContent) {
-      return (
-        <>
-          <Drawer.Title className={`${instrumentSerif.className} font-medium mb-2 text-gray-900 text-2xl`}>
-            {infoDrawerContent.title}
-          </Drawer.Title>
-          <p className="text-gray-600 mb-8">
-            {infoDrawerContent.content}
-          </p>
-        </>
-      );
-    }
+  const renderInfoDrawerContent = () => {
+    if (!infoDrawerContent) return null;
 
+    return (
+      <>
+        <Drawer.Title className={`${instrumentSerif.className} font-medium mb-2 text-gray-900 text-2xl`}>
+          {infoDrawerContent.title}
+        </Drawer.Title>
+        <p className="text-gray-600 mb-8">
+          {infoDrawerContent.content}
+        </p>
+      </>
+    );
+  };
+
+  const renderMetricDrawerContent = () => {
     if (!analysisResult || !selectedMetric) return null;
 
     const metricInfo = {
@@ -572,52 +607,68 @@ function ResultsContent() {
   );
 
   return (
-    <Drawer.Root open={isInfoDrawerOpen} onOpenChange={setIsInfoDrawerOpen}>
-      <main className="relative w-full h-screen flex flex-col justify-between overflow-hidden bg-custom-bg">
-        {analysisStatus === 'loading' ? renderLoadingScreen() : (
-          <div className="flex-grow flex flex-col justify-between h-full p-4 pt-safe pb-safe">
-            <h1 className={`${instrumentSerif.className} text-3xl text-teal-500 text-center mb-0 mt-2`}>Face Pace</h1>
-            <div className="flex-grow flex items-center overflow-hidden mb-4 h-[70vh] mt-2">
-              <div className="relative w-full max-w-md mx-auto h-full flex items-center">
-                <div 
-                  ref={cardsContainerRef} 
-                  className="overflow-x-auto snap-x snap-mandatory flex w-full h-full scrollbar-hide"
-                >
-                  {renderAnalysisCards()}
+    <>
+      <Drawer.Root open={isInfoDrawerOpen} onOpenChange={setIsInfoDrawerOpen}>
+        <main className="relative w-full h-screen flex flex-col justify-between overflow-hidden bg-custom-bg">
+          {analysisStatus === 'loading' ? renderLoadingScreen() : (
+            <div className="flex-grow flex flex-col justify-between h-full p-4 pt-safe pb-safe">
+              <h1 className={`${instrumentSerif.className} text-3xl text-teal-500 text-center mb-0 mt-2`}>Face Pace</h1>
+              <div className="flex-grow flex items-center overflow-hidden mb-4 h-[70vh] mt-2">
+                <div className="relative w-full max-w-md mx-auto h-full flex items-center">
+                  <div 
+                    ref={cardsContainerRef} 
+                    className="overflow-x-auto snap-x snap-mandatory flex w-full h-full scrollbar-hide"
+                  >
+                    {renderAnalysisCards()}
+                  </div>
+                  {currentCardIndex > 0 && (
+                    <button 
+                      onClick={() => handleScroll('left')} 
+                      className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-teal-500 rounded-full p-2 shadow-md z-10"
+                    >
+                      &lt;
+                    </button>
+                  )}
+                  {currentCardIndex < totalCards - 1 && (
+                    <button 
+                      onClick={() => handleScroll('right')} 
+                      className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-teal-500 rounded-full p-2 shadow-md z-10"
+                    >
+                      &gt;
+                    </button>
+                  )}
                 </div>
-                {currentCardIndex > 0 && (
-                  <button 
-                    onClick={() => handleScroll('left')} 
-                    className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-teal-500 rounded-full p-2 shadow-md z-10"
-                  >
-                    &lt;
-                  </button>
-                )}
-                {currentCardIndex < totalCards - 1 && (
-                  <button 
-                    onClick={() => handleScroll('right')} 
-                    className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-teal-500 rounded-full p-2 shadow-md z-10"
-                  >
-                    &gt;
-                  </button>
-                )}
               </div>
             </div>
-          </div>
-        )}
-      </main>
-      <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 bg-black/40" />
-        <Drawer.Content className="bg-gray-100 flex flex-col rounded-t-[10px] mt-24 h-fit fixed bottom-0 left-0 right-0 outline-none">
-          <div className="p-4 bg-white rounded-t-[10px] flex-1">
-            <div aria-hidden className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300 mb-8" />
-            <div className="max-w-md mx-auto">
-              {renderDrawerContent()}
+          )}
+        </main>
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
+          <Drawer.Content className="bg-gray-100 flex flex-col rounded-t-[10px] mt-24 h-fit fixed bottom-0 left-0 right-0 outline-none z-50">
+            <div className="p-4 bg-white rounded-t-[10px] flex-1">
+              <div aria-hidden className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300 mb-8" />
+              <div className="max-w-md mx-auto">
+                {renderInfoDrawerContent()}
+              </div>
             </div>
-          </div>
-        </Drawer.Content>
-      </Drawer.Portal>
-    </Drawer.Root>
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
+
+      <Drawer.Root open={isMetricDrawerOpen} onOpenChange={setIsMetricDrawerOpen}>
+        <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
+          <Drawer.Content className="bg-gray-100 flex flex-col rounded-t-[10px] mt-24 h-fit fixed bottom-0 left-0 right-0 outline-none z-50">
+            <div className="p-4 bg-white rounded-t-[10px] flex-1">
+              <div aria-hidden className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300 mb-8" />
+              <div className="max-w-md mx-auto">
+                {renderMetricDrawerContent()}
+              </div>
+            </div>
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
+    </>
   );
 }
 
